@@ -3,7 +3,7 @@
 Project Manager: [Name] ([GitHub Name])\
 Communications Lead: Jakobe Humphrey Jakobe6625\
 Git Master: [Name] ([GitHub Name])\
-Design Lead: [Name] ([GitHub Name])\
+Design Lead: Brad Fenasci (Fenista10)\
 Quality Assurance Tester: [Name] ([GitHub Name])
 
 # About Our Software
