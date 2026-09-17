@@ -1,4 +1,4 @@
-# [Name of the Project] : [Team Number]
+# Shuffly : 19
 # Members
 Project Manager: [Name] ([GitHub Name])\
 Communications Lead: Jakobe Humphrey Jakobe6625\
