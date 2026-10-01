@@ -7,8 +7,9 @@ Design Lead: Brad Fenasci (bradfenasci)\
 Quality Assurance Tester: [Name] ([GitHub Name])
 
 # About Our Software
-
-Describe a little about what the project is about here.
+Tired of Spotify's useless shuffle and hearing the same songs over and over? Tired of not listening to what you want on Pandora?
+Introducing Shuffly which aims to solve all these problems by giving you custom shuffle modes and letting you listen to what you 
+want, when you want.
 ## Platforms Tested on
 - MacOS
 - Android
@@ -27,6 +28,7 @@ Styles Guide(s): [link]
 - Don't forget to include versions
 ### Downloading Dependencies
 Describe where to download the dependencies here. Some will likely require a web download. Provide links here. For IDE extensions, make sure your project works with the free version of them, and detail which IDE(s) these are available in. 
+Current code provided is being built in Eclipse using Maven.
 
 ## Commands
 Describe how the commands and process to launch the project on the main branch in such a way that anyone working on the project knows how to check the affects of any code they add.
