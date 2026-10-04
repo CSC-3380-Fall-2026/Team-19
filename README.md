@@ -1,6 +1,6 @@
 # Shuffly : 19
 # Members
-Project Manager: [Name] ([GitHub Name])\
+Project Manager: Alana Edwards alanaedwards1204\
 Communications Lead: Jakobe Humphrey Jakobe6625\
 Git Master: [Name] ([GitHub Name])\
 Design Lead: Brad Fenasci (bradfenasci)\
