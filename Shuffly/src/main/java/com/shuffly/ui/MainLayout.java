@@ -1,6 +1,7 @@
 package com.shuffly.ui;
-
+// Brad Fenasci
 import javafx.geometry.Insets;
+
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
@@ -13,6 +14,11 @@ import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
+import com.shuffly.model.*;
+import com.shuffly.QueueManager;
+import com.shuffly.ShuffleAlgorithm;
+import java.util.ArrayList;
+import java.util.List;
 
 
 public class MainLayout extends BorderPane{
@@ -29,6 +35,11 @@ public class MainLayout extends BorderPane{
 	private javafx.scene.control.ProgressBar progressBar;
 	private Button playBtn;
 	private Label shuffleLabel;
+	
+	private final QueueManager<Track> queueManager = new QueueManager<>();
+	
+	private boolean spotifyConnected = false;
+	private String spotifyUserName = null;
 	
 	public MainLayout() {
 		// === SIDEBAR ===
@@ -248,6 +259,15 @@ public class MainLayout extends BorderPane{
 	    return playerBar;
 	}
 	
+	private void updatePlayerBar() {
+	    Track current = queueManager.getCurrent();
+	    // Later update the actual labels in the player bar here
+	    // For now we just make sure the method exists
+	    if (current != null) {
+	        System.out.println("Now playing: " + current);
+	    }
+	}
+	
 	private Button createPlayButton() {
 	    Button playBtn = new Button("▶");
 	    
@@ -365,65 +385,282 @@ public class MainLayout extends BorderPane{
 	        case "Settings":
 	            contentArea.getChildren().add(createAppearanceSection());
 	            break;
-	        default:
-	            // Placeholder for Home / Queue
-	            VBox placeholder = new VBox(12);
-	            placeholder.setAlignment(Pos.CENTER);
-	            placeholder.setPadding(new Insets(60, 20, 60, 20));
-	            placeholder.setStyle("-fx-background-color: #181818; -fx-background-radius: 12px;");
-	            VBox.setVgrow(placeholder, Priority.ALWAYS);
-
-	            Label icon = new Label("♪");
-	            icon.setTextFill(Color.web("#535353"));
-	            icon.setFont(Font.font(48));
-
-	            Label text = new Label("Content for " + pageName + " will appear here");
-	            text.setTextFill(Color.web("#b3b3b3"));
-	            text.setFont(Font.font(15));
-
-	            placeholder.getChildren().addAll(icon, text);
-	            contentArea.getChildren().add(placeholder);
+	        case "Queue":
+	            contentArea.getChildren().add(createQueuePage());
+	            break;
+	        case "Home":
+	            contentArea.getChildren().add(createHomePage());
 	            break;
 	    }
 	}
 	
+	private VBox createHomePage() {
+	    VBox page = new VBox(25);
+	    page.setPadding(new Insets(10, 0, 20, 0));
+
+	    // Welcome text
+	    Label welcome = new Label("Welcome to Shuffly");
+	    welcome.setTextFill(Color.WHITE);
+	    welcome.setFont(Font.font("System", FontWeight.BOLD, 28));
+
+	    Label subtitle = new Label("Connect your Spotify account to start using smarter shuffle modes");
+	    subtitle.setTextFill(Color.web("#b3b3b3"));
+	    subtitle.setFont(Font.font(15));
+	    subtitle.setPadding(new Insets(0, 0, 10, 0));
+
+	    // Connection card
+	    VBox connectionCard = new VBox(18);
+	    connectionCard.setPadding(new Insets(28));
+	    connectionCard.setStyle(
+	        "-fx-background-color: #181818;" +
+	        "-fx-background-radius: 12px;"
+	    );
+	    connectionCard.setMaxWidth(480);
+
+	    Label statusLabel = new Label();
+	    statusLabel.setFont(Font.font(15));
+
+	    Button connectBtn = new Button();
+	    connectBtn.setFont(Font.font("System", FontWeight.SEMI_BOLD, 14));
+	    connectBtn.setCursor(javafx.scene.Cursor.HAND);
+	    connectBtn.setStyle(
+	        "-fx-background-radius: 20px;" +
+	        "-fx-padding: 12 28;"
+	    );
+
+	    // Update UI based on connection state
+	    updateConnectionUI(statusLabel, connectBtn);
+
+	    // Temporary click handler (replace this with real OAuth)
+	    connectBtn.setOnAction(e -> {
+	        if (!spotifyConnected) {
+	            // Simulate successful connection for now
+	            spotifyConnected = true;
+	            spotifyUserName = "Your Name"; // later this comes from Spotify
+	            updateConnectionUI(statusLabel, connectBtn);
+	        } else {
+	            // Disconnect
+	            spotifyConnected = false;
+	            spotifyUserName = null;
+	            updateConnectionUI(statusLabel, connectBtn);
+	        }
+	    });
+
+	    connectionCard.getChildren().addAll(statusLabel, connectBtn);
+	    page.getChildren().addAll(welcome, subtitle, connectionCard);
+
+	    return page;
+	}
+
+	private void updateConnectionUI(Label statusLabel, Button connectBtn) {
+	    if (spotifyConnected) {
+	        statusLabel.setText("Connected as " + spotifyUserName);
+	        statusLabel.setTextFill(Color.web("#1db954"));
+
+	        connectBtn.setText("Disconnect");
+	        connectBtn.setStyle(
+	            "-fx-background-color: #282828;" +
+	            "-fx-text-fill: white;" +
+	            "-fx-background-radius: 20px;" +
+	            "-fx-padding: 12 28;" +
+	            "-fx-cursor: hand;"
+	        );
+	    } else {
+	        statusLabel.setText("Not connected to Spotify");
+	        statusLabel.setTextFill(Color.web("#b3b3b3"));
+
+	        connectBtn.setText("Connect to Spotify");
+	        connectBtn.setStyle(
+	            "-fx-background-color: #1db954;" +
+	            "-fx-text-fill: black;" +
+	            "-fx-background-radius: 20px;" +
+	            "-fx-padding: 12 28;" +
+	            "-fx-cursor: hand;"
+	        );
+	    }
+	}
+	
 	private VBox createLibraryPage() {
-	    VBox page = new VBox(30);
+	    // Temporary mock data 
+	    List<Playlist> playlists = createMockPlaylists();
+	    List<Station> stations = createMockStations();
+
+	    return buildLibraryPage(playlists, stations);
+	}
+	
+	private VBox buildLibraryPage(List<Playlist> playlists, List<Station> stations) {
+	    VBox page = new VBox(35);
+	    page.setPadding(new Insets(10, 0, 20, 0));
 
 	    // Playlists section
-	    VBox playlistsSection = createSection("Playlists", "Your collections and mixes");
+	    VBox playlistsSection = new VBox(16);
+	    
+	    Label playlistsTitle = new Label("Playlists");
+	    playlistsTitle.setTextFill(Color.WHITE);
+	    playlistsTitle.setFont(Font.font("System", FontWeight.BOLD, 22));
+	    
+	    // Horizontal Row of playlist cards
+	    HBox playlistCards = new HBox(18);
+	    for (Playlist playlist : playlists) {
+	        playlistCards.getChildren().add(createPlaylistCard(playlist));
+	    }
+
+	    playlistsSection.getChildren().addAll(playlistsTitle, playlistCards);
 	    
 	    // Stations section
-	    VBox stationsSection = createSection("Stations", "Mood and artist based radio");
+	    VBox stationsSection = new VBox(16);
+	    
+	    Label stationsTitle = new Label("Stations");
+	    stationsTitle.setTextFill(Color.WHITE);
+	    stationsTitle.setFont(Font.font("System", FontWeight.BOLD, 22));
+	    
+	    HBox stationCards = new HBox(18);
+	    for (Station station : stations) {
+	        stationCards.getChildren().add(createStationCard(station));
+	    }
+	    
+	    stationsSection.getChildren().addAll(stationsTitle, stationCards);
 
 	    page.getChildren().addAll(playlistsSection, stationsSection);
 	    return page;
 	}
 
-	private VBox createSection(String title, String description) {
-	    VBox section = new VBox(12);
+	private VBox createPlaylistCard(Playlist playlist) {
+		VBox card = new VBox(10);
+		card.setPrefWidth(160);
+		card.setCursor(javafx.scene.Cursor.HAND);
+		
+		// Cover art placeholder
+		Label cover = new Label("♪");
+		cover.setPrefSize(160, 160);
+		cover.setAlignment(Pos.CENTER);
+		cover.setStyle(
+				"-fx-background-color: #282828;" +
+				"-fx-text-fill: #b3b3b3;" +
+				"-fx-font-size: 42px;" +
+				"-fx-background-radius: 8px;"
+		);
+		
+		Label name = new Label(playlist.getName());
+		name.setTextFill(Color.WHITE);
+		name.setFont(Font.font("System", FontWeight.SEMI_BOLD, 14));
+		
+		Label info = new Label(playlist.getTrackCount() + " songs");
+		info.setTextFill(Color.WHITE);
+		info.setFont(Font.font(12));
+		
+		card.getChildren().addAll(cover, name, info);
+		
+		//Hover effect
+		card.setOnMouseEntered(e -> {
+			cover.setStyle(
+				"-fx-background-color: #333333;" +
+				"-fx-text-fill: #b3b3b3;" +
+				"-fx-font-size: 42px;" +
+				"-fx-background-radius: 8px;"
+			);
+		});
+		card.setOnMouseExited(e -> {
+			cover.setStyle(
+				"-fx-background-color: #282828;" +
+				"-fx-text-fill: #b3b3b3;" +
+				"-fx-font-size: 42px;" +
+				"-fx-background-radius: 8px;"
+			);
+		});
+		// When the user clicks a playlist → load it into the QueueManager
+	    card.setOnMouseClicked(e -> {
+	        queueManager.loadPlaylist(playlist.getTracks(), true); // true = shuffle
+	        showContent("Queue");          // jump to Queue page
+	        setSelectedButton(queueBtn);
+	        updatePlayerBar();             // refresh song info
+	    });
 
-	    Label sectionTitle = new Label(title);
-	    sectionTitle.setTextFill(Color.WHITE);
-	    sectionTitle.setFont(Font.font("System", FontWeight.SEMI_BOLD, 20));
+		return card;
+	}
+	
+	private VBox createStationCard(Station station) {
+		VBox card = new VBox(10);
+		card.setPrefWidth(180);
+		card.setCursor(javafx.scene.Cursor.HAND);
+		
+		// Station cover
+		Label cover = new Label("◉");
+		cover.setPrefSize(180,  120);
+		cover.setAlignment(Pos.CENTER);
+		cover.setStyle(
+				"-fx-background-color: #1e1e2f;" +
+				"-fx-text-fill: #1db954;" +
+				"-fx-font-size: 36px;" +
+				"-fx-background-radius: 8px;"
+		);
+		
+		Label name = new Label(station.getName());
+		name.setTextFill(Color.WHITE);
+		name.setFont(Font.font("System", FontWeight.SEMI_BOLD, 14));
+		
+		Label info = new Label(station.getDescription());
+		info.setTextFill(Color.web("#b3b3b3"));
+		info.setFont(Font.font(12));
+		info.setWrapText(true);
+		info.setMaxWidth(180);
+		
+		card.getChildren().addAll(cover, name, info);
+		
+		// Hover effect
+		card.setOnMouseEntered(e -> {
+			cover.setStyle(
+				"-fx-background-color: #2a2a3d;" +
+				"-fx-text-fill: #1db954;" +
+				"-fx-font-size: 36px;" +
+				"-fx-background-radius: 8px;"
+			);	
+		});
+		card.setOnMouseExited(e ->{
+			cover.setStyle(
+				"-fx-background-color: #1e1e2f;" +
+				"-fx-text-fill: #1db954;" +
+				"-fx-font-size: 36px;" +
+				"-fx-background-radius: 8px;"
+			);
+		});
+		return card;
+	}
+	
+	private VBox createQueuePage() {
+	    VBox page = new VBox(20);
+	    page.setPadding(new Insets(10, 0, 20, 0));
 
-	    Label sectionDesc = new Label(description);
-	    sectionDesc.setTextFill(Color.web("#b3b3b3"));
-	    sectionDesc.setFont(Font.font(13));
+	    // Current song
+	    Track current = queueManager.getCurrent();
+	    Label nowPlaying = new Label(current != null ? "Now Playing: " + current : "Nothing playing");
+	    nowPlaying.setTextFill(Color.WHITE);
+	    nowPlaying.setFont(Font.font("System", FontWeight.BOLD, 18));
 
-	    // Placeholder card
-	    HBox card = new HBox();
-	    card.setPrefHeight(100);
-	    card.setStyle("-fx-background-color: #181818; -fx-background-radius: 10px;");
-	    card.setAlignment(Pos.CENTER);
+	    // Up Next
+	    Label upNextTitle = new Label("Up Next");
+	    upNextTitle.setTextFill(Color.WHITE);
+	    upNextTitle.setFont(Font.font("System", FontWeight.SEMI_BOLD, 16));
+	    upNextTitle.setPadding(new Insets(20, 0, 8, 0));
 
-	    Label placeholder = new Label("Items will appear here");
-	    placeholder.setTextFill(Color.web("#535353"));
+	    VBox upNextList = new VBox(8);
+	    List<Track> upNext = queueManager.getUpNext();
 
-	    card.getChildren().add(placeholder);
+	    if (upNext.isEmpty()) {
+	        Label empty = new Label("Queue is empty");
+	        empty.setTextFill(Color.web("#b3b3b3"));
+	        upNextList.getChildren().add(empty);
+	    } else {
+	        for (Track track : upNext) {
+	            Label row = new Label(track.getName() + "  –  " + track.getArtist());
+	            row.setTextFill(Color.web("#b3b3b3"));
+	            row.setFont(Font.font(14));
+	            upNextList.getChildren().add(row);
+	        }
+	    }
 
-	    section.getChildren().addAll(sectionTitle, sectionDesc, card);
-	    return section;
+	    page.getChildren().addAll(nowPlaying, upNextTitle, upNextList);
+	    return page;
 	}
 
 	private VBox createShuffleModePage() {
@@ -602,5 +839,30 @@ public class MainLayout extends BorderPane{
 	        (int) (color.getRed() * 255),
 	        (int) (color.getGreen() * 255),
 	        (int) (color.getBlue() * 255));
+	}
+	
+	private List<Playlist> createMockPlaylists() {
+	    List<Playlist> list = new ArrayList<>();
+
+	    Playlist liked = new Playlist("1", "Liked Songs", null);
+	    liked.addTrack(new Track("t1", "Song A", "Artist A", null, 200000));
+	    liked.addTrack(new Track("t2", "Song B", "Artist B", null, 180000));
+
+	    list.add(liked);
+	    list.add(new Playlist("2", "Chill Mix", null));
+	    list.add(new Playlist("3", "Focus Flow", null));
+	    list.add(new Playlist("4", "Late Night", null));
+	    list.add(new Playlist("5", "Workout", null));
+
+	    return list;
+	}
+
+	private List<Station> createMockStations() {
+	    List<Station> list = new ArrayList<>();
+	    list.add(new Station("s1", "Mood: Chill", "Based on your calm listening", null));
+	    list.add(new Station("s2", "Artist Radio", "Similar to your top artists", null));
+	    list.add(new Station("s3", "Discovery", "New music you might like", null));
+	    list.add(new Station("s4", "Energy Boost", "High energy tracks", null));
+	    return list;
 	}
 }
