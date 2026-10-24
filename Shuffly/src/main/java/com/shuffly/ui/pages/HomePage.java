@@ -8,6 +8,7 @@ import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
+import com.shuffly.spotify.*;
 
 public class HomePage extends VBox {
 
@@ -23,7 +24,7 @@ public class HomePage extends VBox {
         welcome.setTextFill(Color.WHITE);
         welcome.setFont(Font.font("System", FontWeight.BOLD, 28));
 
-        Label subtitle = new Label("Connect your Spotify account to start using smarter shuffle modes");
+        Label subtitle = new Label("Connect your Spotify account to start using smarter shuffle modes; Requires Spotify Premium");
         subtitle.setTextFill(Color.web("#b3b3b3"));
         subtitle.setFont(Font.font(15));
         subtitle.setPadding(new Insets(0, 0, 10, 0));
@@ -44,14 +45,30 @@ public class HomePage extends VBox {
 
         connectBtn.setOnAction(e -> {
             if (!state.spotifyConnected) {
-                // Temporary simulation – replace with real OAuth later
-                state.spotifyConnected = true;
-                state.spotifyUserName = "Your Name";
+                // Run on a background thread so the UI doesn't freeze
+                new Thread(() -> {
+                    try {
+                        String token = SpotifyAuth.login();
+                        if (token != null) {
+                            SpotifyApiClient api = new SpotifyApiClient();
+                            String name = api.getCurrentUserName();
+
+                            javafx.application.Platform.runLater(() -> {
+                                state.spotifyConnected = true;
+                                state.spotifyUserName = name != null ? name : "Spotify User";
+                                updateConnectionUI(statusLabel, connectBtn);
+                            });
+                        }
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                    }
+                }).start();
             } else {
+                SpotifyAuth.logout();
                 state.spotifyConnected = false;
                 state.spotifyUserName = null;
+                updateConnectionUI(statusLabel, connectBtn);
             }
-            updateConnectionUI(statusLabel, connectBtn);
         });
 
         connectionCard.getChildren().addAll(statusLabel, connectBtn);
