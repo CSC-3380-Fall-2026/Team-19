@@ -4,6 +4,7 @@ package com.shuffly;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import com.shuffly.model.Track;
 
 public class QueueManager<T> {
     private final List<T> upNext = new ArrayList<>();
@@ -45,4 +46,19 @@ public class QueueManager<T> {
     public T getCurrent()                     { return current; }
     public List<T> getUpNext()                { return Collections.unmodifiableList(upNext); }
     public List<T> getHistory()               { return Collections.unmodifiableList(history); }
+    
+    // --- Shuffle mode support ---
+    private ShuffleMode shuffleMode = ShuffleMode.TRULY_RANDOM;
+
+    public void setShuffleMode(ShuffleMode mode) { this.shuffleMode = mode; }
+    public ShuffleMode getShuffleMode()          { return shuffleMode; }
+
+    // Loads a playlist of Tracks, ordered by the currently selected shuffle mode
+    @SuppressWarnings("unchecked")
+    public void loadShuffled(List<Track> songs) {
+        // grab history first, because loadPlaylist() clears it
+        List<Track> recent = new ArrayList<>((List<Track>) (List<?>) history);
+        List<Track> ordered = shuffleMode.getStrategy().shuffle(songs, recent);
+        loadPlaylist((List<T>) (List<?>) ordered, false);
+    }
 }
