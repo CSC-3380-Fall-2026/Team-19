@@ -13,7 +13,7 @@ public class ShufflyApp extends Application{
 	    Scene scene = new Scene(root, 1280, 800);
 	    
 	    scene.getRoot().setStyle("-fx-focus-color: transparent; -fx-faint-focus-color: transparent;");
-	    //scene.getStylesheets().add(getClass().getResource("/styles.css").toExternalForm());
+	    scene.getStylesheets().add(getClass().getResource("/styles.css").toExternalForm());
 	    
 	    primaryStage.setTitle("Shuffly");
 	    primaryStage.setScene(scene);
