@@ -24,8 +24,12 @@ Styles Guide(s): [link]
 # How to Run Dev and Test Environment
 
 ## Dependencies
-- List all dependencies here
-- Don't forget to include versions
+-Java JDK 17
+-Apache Maven
+-JavaFX 21.0.4
+-javafx-controls
+-javafx-fxml
+-JUnit 5.10.2 (for unit testing)
 ### Downloading Dependencies
 Describe where to download the dependencies here. Some will likely require a web download. Provide links here. For IDE extensions, make sure your project works with the free version of them, and detail which IDE(s) these are available in. 
 Current code provided is being built in Eclipse using Maven.
