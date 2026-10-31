@@ -53,6 +53,7 @@ public class MainLayout extends BorderPane{
 		logo.setPadding(new Insets(0, 0, 20, 10));
 		
 		Button homeBtn = createSidebarButton("Home");
+		Button searchBtn = createSidebarButton("Search");
 		Button libraryBtn = createSidebarButton("Library");
 		Button playlistsBtn = createSidebarButton("Playlists");
 		Button stationsBtn = createSidebarButton("Stations");
@@ -60,12 +61,13 @@ public class MainLayout extends BorderPane{
 		
 		// Simple click actions for now
 		homeBtn.setOnAction(e -> showContent("Home"));
+		searchBtn.setOnAction(e -> contentArea.getChildren().setAll(new SearchPage()));
 		libraryBtn.setOnAction(e -> showContent("Library"));
 		playlistsBtn.setOnAction(e -> showContent("Playlists"));
 		stationsBtn.setOnAction(e -> showContent("Stations"));
 		queueBtn.setOnAction(e -> showContent("Queue"));
 		
-		sidebar.getChildren().addAll(logo, homeBtn, libraryBtn, playlistsBtn, stationsBtn, queueBtn);
+		sidebar.getChildren().addAll(logo, homeBtn, searchBtn, libraryBtn, playlistsBtn, stationsBtn, queueBtn);
 		return sidebar;
 	}
 	
