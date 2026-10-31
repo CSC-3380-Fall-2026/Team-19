@@ -20,6 +20,7 @@ public class MainLayout extends BorderPane{
 	private VBox contentArea;
 	
 	private Button homeBtn;
+	private Button searchBtn;
 	private Button libraryBtn;
 	private Button shuffleModeBtn;
 	private Button queueBtn;
@@ -54,6 +55,7 @@ public class MainLayout extends BorderPane{
 	}
 	
 	private VBox createSidebar() {
+<<<<<<< HEAD
 	    VBox sidebar = new VBox(8);
 	    sidebar.setPrefWidth(240);
 	    sidebar.setStyle("-fx-background-color: #000000;");
@@ -67,6 +69,7 @@ public class MainLayout extends BorderPane{
 
 	    // Navigation buttons
 	    homeBtn = createSidebarButton("Home");
+			searchBtn = createSidebarButton("Search");
 	    libraryBtn = createSidebarButton("Library");
 	    shuffleModeBtn = createSidebarButton("Shuffle Mode");
 	    queueBtn = createSidebarButton("Queue");
@@ -80,6 +83,11 @@ public class MainLayout extends BorderPane{
 	        showContent("Home");
 	        setSelectedButton(homeBtn);
 	    });
+ 			searchBtn.setOnAction(e -> {
+        	contentArea.getChildren().setAll(new SearchPage());
+        	setSelectedButton(searchBtn);
+    	});
+
 	    libraryBtn.setOnAction(e -> {
 	        showContent("Library");
 	        setSelectedButton(libraryBtn);
@@ -104,6 +112,7 @@ public class MainLayout extends BorderPane{
 	    sidebar.getChildren().addAll(
 	        logo,
 	        homeBtn,
+					searchBtn,
 	        libraryBtn,
 	        shuffleModeBtn,
 	        queueBtn,
@@ -112,6 +121,35 @@ public class MainLayout extends BorderPane{
 	    );
 
 	    return sidebar;
+=======
+		VBox sidebar = new VBox(15);
+		sidebar.setPrefWidth(230);
+		sidebar.setStyle("-fx-background-color: #1e1e2f;");
+		sidebar.setPadding(new Insets(25, 15, 25, 15));
+		
+		Label logo = new Label("Shuffly");
+		logo.setTextFill(Color.WHITE);
+		logo.setFont(Font.font("System", FontWeight.BOLD, 24));
+		logo.setPadding(new Insets(0, 0, 20, 10));
+		
+		Button homeBtn = createSidebarButton("Home");
+		Button searchBtn = createSidebarButton("Search");
+		Button libraryBtn = createSidebarButton("Library");
+		Button playlistsBtn = createSidebarButton("Playlists");
+		Button stationsBtn = createSidebarButton("Stations");
+		Button queueBtn = createSidebarButton("Queue");
+		
+		// Simple click actions for now
+		homeBtn.setOnAction(e -> showContent("Home"));
+		searchBtn.setOnAction(e -> contentArea.getChildren().setAll(new SearchPage()));
+		libraryBtn.setOnAction(e -> showContent("Library"));
+		playlistsBtn.setOnAction(e -> showContent("Playlists"));
+		stationsBtn.setOnAction(e -> showContent("Stations"));
+		queueBtn.setOnAction(e -> showContent("Queue"));
+		
+		sidebar.getChildren().addAll(logo, homeBtn, searchBtn, libraryBtn, playlistsBtn, stationsBtn, queueBtn);
+		return sidebar;
+>>>>>>> a73e9db (Add song search functionality)
 	}
 	
 	private Button createSidebarButton(String text) {
@@ -501,7 +539,7 @@ public class MainLayout extends BorderPane{
 	}
 	
 	private void setSelectedButton(Button selected) {
-	    Button[] allButtons = {homeBtn, libraryBtn, shuffleModeBtn, queueBtn, settingsBtn};
+	    Button[] allButtons = {homeBtn, searchBtn, libraryBtn, shuffleModeBtn, queueBtn, settingsBtn};
 
 	    String baseStyle =
 	        "-fx-background-color: transparent;" +
