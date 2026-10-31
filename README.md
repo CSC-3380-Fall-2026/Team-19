@@ -36,8 +36,17 @@ javafx-fxml
 
 JUnit 5.10.2 (for unit testing)
 ### Downloading Dependencies
-Describe where to download the dependencies here. Some will likely require a web download. Provide links here. For IDE extensions, make sure your project works with the free version of them, and detail which IDE(s) these are available in. 
-Current code provided is being built in Eclipse using Maven.
+Shuffly requires Java JDK 17 and Apache Maven.
+
+Java JDK 17: https://www.oracle.com/java/technologies/downloads/
+
+Apache Maven: https://maven.apache.org/download.cgi
+
+Eclipse IDE: https://www.eclipse.org/downloads/
+
+The project is currently being developed in Eclipse using Maven. Other Java IDEs with Maven support may also be used.
+
+JavaFX and JUnit dependencies are included in the pom.xml file and will be downloaded automatically by Maven when the project is built.
 
 ## Commands
 Describe how the commands and process to launch the project on the main branch in such a way that anyone working on the project knows how to check the affects of any code they add.
