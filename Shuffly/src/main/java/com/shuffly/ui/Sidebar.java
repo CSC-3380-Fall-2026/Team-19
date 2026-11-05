@@ -14,7 +14,7 @@ import java.util.function.Consumer;
 
 public class Sidebar extends VBox {
 
-    private final Button homeBtn, libraryBtn, shuffleModeBtn, queueBtn, settingsBtn;
+    private final Button homeBtn, searchBtn, libraryBtn, shuffleModeBtn, queueBtn, settingsBtn;
     private final Consumer<String> onNavigate;
 
     public Sidebar(Consumer<String> onNavigate) {
@@ -31,6 +31,7 @@ public class Sidebar extends VBox {
         logo.setPadding(new Insets(0, 0, 28, 12));
 
         homeBtn = navButton("Home");
+        searchBtn = navButton("Search");
         libraryBtn = navButton("Library");
         shuffleModeBtn = navButton("Shuffle Mode");
         queueBtn = navButton("Queue");
@@ -39,7 +40,7 @@ public class Sidebar extends VBox {
         Region spacer = new Region();
         VBox.setVgrow(spacer, Priority.ALWAYS);
 
-        getChildren().addAll(logo, homeBtn, libraryBtn, shuffleModeBtn, queueBtn, spacer, settingsBtn);
+        getChildren().addAll(logo, homeBtn, searchBtn, libraryBtn, shuffleModeBtn, queueBtn, spacer, settingsBtn);
         select("Home");
     }
 
@@ -62,11 +63,12 @@ public class Sidebar extends VBox {
     }
 
     public void select(String pageName) {
-        Button[] all = {homeBtn, libraryBtn, shuffleModeBtn, queueBtn, settingsBtn};
+        Button[] all = {homeBtn, searchBtn, libraryBtn, shuffleModeBtn, queueBtn, settingsBtn};
         for (Button b : all) applyBaseStyle(b);
 
         switch (pageName) {
             case "Home" -> applySelectedStyle(homeBtn);
+            case "Search" -> applySelectedStyle(searchBtn);
             case "Library" -> applySelectedStyle(libraryBtn);
             case "Shuffle Mode" -> applySelectedStyle(shuffleModeBtn);
             case "Queue" -> applySelectedStyle(queueBtn);
