@@ -1,0 +1,32 @@
+{
+    "license": "ISC",
+    "bin": {"shuffly": "jdeploy-bundle/jdeploy.js"},
+    "name": "shuffly",
+    "files": ["jdeploy-bundle"],
+    "main": "index.js",
+    "preferGlobal": true,
+    "scripts": {"test": "echo \"Error: no test specified\" && exit 1"},
+    "version": "1.0.0",
+    "jdeploy": {
+        "fallbackToUniversal": false,
+        "generateLegacyBundles": false,
+        "publishTargets": [{
+            "name": "github: github",
+            "type": "GITHUB",
+            "url": "https://github.com/CSC-3380-Fall-2026/Team-19"
+        }],
+        "javaVersion": "17",
+        "jar": "target/Team-19.jar",
+        "javafx": true,
+        "title": "Shuffly",
+        "platformBundlesEnabled": false,
+        "downloadPage": {"platforms": ["default"]}
+    },
+    "dependencies": {
+        "command-exists-promise": "^2.0.2",
+        "node-fetch": "2.6.7",
+        "tar": "^4.4.8",
+        "yauzl": "^2.10.0",
+        "shelljs": "^0.8.4"
+    }
+}
