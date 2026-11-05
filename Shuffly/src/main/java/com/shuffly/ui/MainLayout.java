@@ -32,6 +32,7 @@ public class MainLayout extends BorderPane {
 
         switch (pageName) {
             case "Home" -> contentArea.getChildren().add(new HomePage(state));
+            case "Search" -> contentArea.getChildren().add(new SearchPage());
             case "Library" -> contentArea.getChildren().add(
                 new LibraryPage(state, playlist -> {
                     // playlist clicked
