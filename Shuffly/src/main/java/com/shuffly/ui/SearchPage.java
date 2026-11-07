@@ -1,4 +1,3 @@
-
 package com.shuffly.ui;
 
 import javafx.geometry.Insets;
@@ -52,25 +51,40 @@ public class SearchPage extends VBox {
         // Clear previous search results
         resultsContainer.getChildren().clear();
 
-        // Check each song
+         // Show all songs when search is empty
+    if (newValue.isBlank()) {
+
         for (String song : songs) {
-
-          if (song.toLowerCase().contains(newValue.toLowerCase())) {
-
             Label songLabel = new Label(song);
             songLabel.setTextFill(Color.WHITE);
 
             resultsContainer.getChildren().add(songLabel);
-            }
         }
 
-        // Show message if no songs match
-        if (resultsContainer.getChildren().isEmpty() && !newValue.isBlank()) {
-          Label noResults = new Label("No songs found.");
-          noResults.setTextFill(Color.LIGHTGRAY);
-          resultsContainer.getChildren().add(noResults);
+    } else {
+
+        // Check each song
+        for (String song : songs) {
+
+            if (song.toLowerCase().contains(newValue.toLowerCase())) {
+
+                Label songLabel = new Label(song);
+                songLabel.setTextFill(Color.WHITE);
+
+                resultsContainer.getChildren().add(songLabel);
+            }
         }
-    });
+    }
+
+    // Show message if no songs match
+    if (resultsContainer.getChildren().isEmpty() && !newValue.isBlank()) {
+
+        Label noResults = new Label("No songs found.");
+        noResults.setTextFill(Color.LIGHTGRAY);
+
+        resultsContainer.getChildren().add(noResults);
+    }
+});
 
         // Results heading
         Label resultsTitle = new Label("Search Results");
