@@ -1,6 +1,7 @@
-package com.shuffly;
+package com.shuffly.shuffle;
 
 import com.shuffly.model.Track;
+
 import java.util.List;
 
 public class TrulyRandomShuffle implements ShuffleStrategy {

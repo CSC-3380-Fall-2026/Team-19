@@ -1,4 +1,4 @@
-package com.shuffly;
+package com.shuffly.shuffle;
 // Alana Edwards
 
 import java.util.ArrayList;
