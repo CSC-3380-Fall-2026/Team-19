@@ -55,73 +55,6 @@ public class MainLayout extends BorderPane{
 	}
 	
 	private VBox createSidebar() {
-<<<<<<< HEAD
-	    VBox sidebar = new VBox(8);
-	    sidebar.setPrefWidth(240);
-	    sidebar.setStyle("-fx-background-color: #000000;");
-	    sidebar.setPadding(new Insets(24, 12, 24, 12));
-
-	    // Logo
-	    Label logo = new Label("Shuffly");
-	    logo.setTextFill(Color.WHITE);
-	    logo.setFont(Font.font("System", FontWeight.BOLD, 26));
-	    logo.setPadding(new Insets(0, 0, 28, 12));
-
-	    // Navigation buttons
-	    homeBtn = createSidebarButton("Home");
-			searchBtn = createSidebarButton("Search");
-	    libraryBtn = createSidebarButton("Library");
-	    shuffleModeBtn = createSidebarButton("Shuffle Mode");
-	    queueBtn = createSidebarButton("Queue");
-	    settingsBtn = createSidebarButton("Settings");
-
-	    // Default selected
-	    setSelectedButton(homeBtn);
-
-	    // Actions
-	    homeBtn.setOnAction(e -> {
-	        showContent("Home");
-	        setSelectedButton(homeBtn);
-	    });
- 			searchBtn.setOnAction(e -> {
-        	contentArea.getChildren().setAll(new SearchPage());
-        	setSelectedButton(searchBtn);
-    	});
-
-	    libraryBtn.setOnAction(e -> {
-	        showContent("Library");
-	        setSelectedButton(libraryBtn);
-	    });
-	    shuffleModeBtn.setOnAction(e -> {
-	        showContent("Shuffle Mode");
-	        setSelectedButton(shuffleModeBtn);
-	    });
-	    queueBtn.setOnAction(e -> {
-	        showContent("Queue");
-	        setSelectedButton(queueBtn);
-	    });
-	    settingsBtn.setOnAction(e -> {
-	        showContent("Settings");
-	        setSelectedButton(settingsBtn);
-	    });
-
-	    // Push Settings to the bottom
-	    Region spacer = new Region();
-	    VBox.setVgrow(spacer, Priority.ALWAYS);
-
-	    sidebar.getChildren().addAll(
-	        logo,
-	        homeBtn,
-					searchBtn,
-	        libraryBtn,
-	        shuffleModeBtn,
-	        queueBtn,
-	        spacer,
-	        settingsBtn
-	    );
-
-	    return sidebar;
-=======
 		VBox sidebar = new VBox(15);
 		sidebar.setPrefWidth(230);
 		sidebar.setStyle("-fx-background-color: #1e1e2f;");
@@ -149,7 +82,6 @@ public class MainLayout extends BorderPane{
 		
 		sidebar.getChildren().addAll(logo, homeBtn, searchBtn, libraryBtn, playlistsBtn, stationsBtn, queueBtn);
 		return sidebar;
->>>>>>> a73e9db (Add song search functionality)
 	}
 	
 	private Button createSidebarButton(String text) {
