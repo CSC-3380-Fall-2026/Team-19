@@ -12,11 +12,35 @@ public class QueueManager<T> {
     private final List<T> history = new ArrayList<>();
     private T current;
 
-    // Load a playlist into the queue (optionally shuffled)
+    // Load a playlist into the queue
+    @SuppressWarnings("unchecked")
     public void loadPlaylist(List<T> songs, boolean shuffle) {
+        List<T> source;
+
+        if (shuffle) {
+            List<Track> recent = new ArrayList<>();
+
+            for (T item : history) {
+                if (item instanceof Track) {
+                    recent.add((Track) item);
+                }
+            }
+
+            if (songs.stream().allMatch(Track.class::isInstance)) {
+                List<Track> tracks = (List<Track>) (List<?>) songs;
+                List<Track> ordered =
+                        shuffleMode.getStrategy().shuffle(tracks, recent);
+
+                source = (List<T>) (List<?>) ordered;
+            } else {
+                source = ShuffleAlgorithm.shuffle(songs);
+            }
+        } else {
+            source = new ArrayList<>(songs);
+        }
+
         upNext.clear();
         history.clear();
-        List<T> source = shuffle ? ShuffleAlgorithm.shuffle(songs) : new ArrayList<>(songs);
         upNext.addAll(source);
         current = upNext.isEmpty() ? null : upNext.remove(0);
     }
