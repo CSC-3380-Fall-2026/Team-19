@@ -13,6 +13,8 @@ import java.util.stream.IntStream;
 
 import org.junit.jupiter.api.Test;
 
+import com.shuffly.shuffle.ShuffleAlgorithm;
+
 class ShuffleAlgorithmTest {
 
     @Test

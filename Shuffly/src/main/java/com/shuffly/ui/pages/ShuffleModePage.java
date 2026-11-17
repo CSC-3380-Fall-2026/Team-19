@@ -1,7 +1,6 @@
 package com.shuffly.ui.pages;
 
 import com.shuffly.AppState;
-import com.shuffly.ShuffleMode;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
@@ -20,10 +19,18 @@ public class ShuffleModePage extends VBox {
         info.setTextFill(Color.web("#b3b3b3"));
         info.setFont(Font.font(14));
 
+        String[] modes = {
+            "Mood-based",
+            "Truly Random",
+            "Anti-Popularity",
+            "Artist Spacing",
+            "Discovery"
+        };
+
         VBox options = new VBox(10);
 
-        for (ShuffleMode shuffleMode : ShuffleMode.values()) {
-            Button modeBtn = new Button(shuffleMode.getLabel());
+        for (String mode : modes) {
+            Button modeBtn = new Button(mode);
             modeBtn.setMaxWidth(Double.MAX_VALUE);
             modeBtn.setAlignment(Pos.CENTER_LEFT);
 
@@ -40,8 +47,7 @@ public class ShuffleModePage extends VBox {
             modeBtn.setStyle(baseStyle);
 
             modeBtn.setOnAction(e -> {
-                state.currentShuffleMode = shuffleMode.getLabel();
-                state.queueManager.setShuffleMode(shuffleMode);
+                state.currentShuffleMode = mode;
                 if (onModeChanged != null) {
                     onModeChanged.run();
                 }

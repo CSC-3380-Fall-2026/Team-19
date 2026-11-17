@@ -1,4 +1,4 @@
-package com.shuffly;
+package com.shuffly.shuffle;
 
 import java.util.ArrayList;
 import java.util.Arrays;

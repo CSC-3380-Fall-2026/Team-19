@@ -4,19 +4,26 @@ import com.shuffly.AppState;
 import com.shuffly.model.Playlist;
 import com.shuffly.model.Station;
 import com.shuffly.model.Track;
+import com.shuffly.spotify.SpotifyService;
+import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.control.TextInputDialog;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 
-import javafx.scene.control.ScrollPane;
-import javafx.scene.layout.Priority;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.function.Consumer;
 
 public class LibraryPage extends VBox {
@@ -31,15 +38,42 @@ public class LibraryPage extends VBox {
         setSpacing(35);
         setPadding(new Insets(10, 0, 20, 0));
 
-        List<Playlist> playlists = state.spotifyConnected && !state.playlists.isEmpty()
+        rebuildLibraryContent();
+    }
+
+    private void rebuildLibraryContent() {
+        getChildren().clear();
+
+        List<Playlist> playlists = (state.spotifyConnected || !state.playlists.isEmpty())
             ? state.playlists
             : createMockPlaylists();
 
-     // ===== PLAYLISTS =====
+        // ===== PLAYLISTS =====
         VBox playlistsSection = new VBox(16);
+
+        HBox libraryHeader = new HBox(16);
+        libraryHeader.setAlignment(Pos.CENTER_LEFT);
+
         Label playlistsTitle = new Label("Playlists");
         playlistsTitle.setTextFill(Color.WHITE);
         playlistsTitle.setFont(Font.font("System", FontWeight.BOLD, 22));
+
+        Region headerSpacer = new Region();
+        HBox.setHgrow(headerSpacer, Priority.ALWAYS);
+
+        Button createBtn = new Button("+ Create Playlist");
+        createBtn.setStyle(
+            "-fx-background-color: #1db954;" +
+            "-fx-text-fill: black;" +
+            "-fx-font-size: 13px;" +
+            "-fx-font-weight: bold;" +
+            "-fx-background-radius: 20px;" +
+            "-fx-padding: 8 16;" +
+            "-fx-cursor: hand;"
+        );
+        createBtn.setOnAction(e -> createNewPlaylist());
+
+        libraryHeader.getChildren().addAll(playlistsTitle, headerSpacer, createBtn);
 
         HBox playlistCards = new HBox(18);
         playlistCards.setAlignment(Pos.CENTER_LEFT);
@@ -58,17 +92,14 @@ public class LibraryPage extends VBox {
         playlistScroll.setPrefHeight(230);
         playlistScroll.setMinHeight(230);
         playlistScroll.setMaxWidth(Double.MAX_VALUE);
-        HBox.setHgrow(playlistScroll, Priority.ALWAYS);
-
-        // Important: keep background transparent but don't wipe out content
         playlistScroll.getStyleClass().add("library-scroll");
-        playlistScroll.setStyle("-fx-background-color: transparent; -fx-background: transparent;");
         applyAccentToScrollPane(playlistScroll, state.accentColor);
 
-        playlistsSection.getChildren().addAll(playlistsTitle, playlistScroll);
+        playlistsSection.getChildren().addAll(libraryHeader, playlistScroll);
 
         // ===== STATIONS =====
         VBox stationsSection = new VBox(16);
+
         Label stationsTitle = new Label("Stations");
         stationsTitle.setTextFill(Color.WHITE);
         stationsTitle.setFont(Font.font("System", FontWeight.BOLD, 22));
@@ -90,16 +121,35 @@ public class LibraryPage extends VBox {
         stationScroll.setPrefHeight(190);
         stationScroll.setMinHeight(190);
         stationScroll.setMaxWidth(Double.MAX_VALUE);
-        
         stationScroll.getStyleClass().add("library-scroll");
-        stationScroll.setStyle("-fx-background-color: transparent; -fx-background: transparent;");
         applyAccentToScrollPane(stationScroll, state.accentColor);
-        
+
         stationsSection.getChildren().addAll(stationsTitle, stationScroll);
 
         getChildren().addAll(playlistsSection, stationsSection);
     }
-    
+
+    private void createNewPlaylist() {
+        TextInputDialog dialog = new TextInputDialog();
+        dialog.setTitle("Create Playlist");
+        dialog.setHeaderText("New Playlist");
+        dialog.setContentText("Playlist name:");
+
+        Optional<String> result = dialog.showAndWait();
+        if (result.isEmpty()) return;
+
+        String name = result.get().trim();
+        if (name.isEmpty()) return;
+
+        String id = "local-" + UUID.randomUUID();
+        Playlist newPlaylist = new Playlist(id, name, null);
+
+        // Keep newest first
+        state.playlists.add(0, newPlaylist);
+
+        rebuildLibraryContent();
+    }
+
     private VBox createPlaylistCard(Playlist playlist) {
         VBox card = new VBox(10);
         card.setPrefWidth(160);
@@ -107,7 +157,6 @@ public class LibraryPage extends VBox {
         card.setMaxWidth(160);
         card.setCursor(javafx.scene.Cursor.HAND);
 
-        // Cover art placeholder
         Label cover = new Label("♪");
         cover.setPrefSize(160, 160);
         cover.setMinSize(160, 160);
@@ -132,7 +181,6 @@ public class LibraryPage extends VBox {
 
         card.getChildren().addAll(cover, name, info);
 
-        // Hover effect
         card.setOnMouseEntered(e -> cover.setStyle(
             "-fx-background-color: #333333;" +
             "-fx-text-fill: #b3b3b3;" +
@@ -146,17 +194,20 @@ public class LibraryPage extends VBox {
             "-fx-background-radius: 8px;"
         ));
 
-        // Click → load tracks if needed, put in queue, open playlist page
         card.setOnMouseClicked(e -> {
             new Thread(() -> {
                 try {
-                    if (playlist.getTracks().isEmpty() && state.spotifyConnected) {
-                        new com.shuffly.spotify.SpotifyService().loadPlaylistTracks(playlist);
+                    if (playlist.getTracks().isEmpty()
+                            && state.spotifyConnected
+                            && !playlist.getId().startsWith("local-")) {
+                        new SpotifyService().loadPlaylistTracks(playlist);
                     }
 
-                    javafx.application.Platform.runLater(() -> {
-                        state.queueManager.loadPlaylist(playlist.getTracks(), true);
-                        state.isPlaying = true;
+                    Platform.runLater(() -> {
+                        if (!playlist.getTracks().isEmpty()) {
+                            state.queueManager.loadShuffled(playlist.getTracks());
+                            state.isPlaying = true;
+                        }
                         state.selectedPlaylist = playlist;
 
                         if (onPlaylistSelected != null) {
@@ -181,10 +232,14 @@ public class LibraryPage extends VBox {
 
         Label cover = new Label("◉");
         cover.setPrefSize(180, 120);
+        cover.setMinSize(180, 120);
+        cover.setMaxSize(180, 120);
         cover.setAlignment(Pos.CENTER);
         cover.setStyle(
-            "-fx-background-color: #1e1e2f; -fx-text-fill: #1db954; " +
-            "-fx-font-size: 36px; -fx-background-radius: 8px;"
+            "-fx-background-color: #1e1e2f;" +
+            "-fx-text-fill: #1db954;" +
+            "-fx-font-size: 36px;" +
+            "-fx-background-radius: 8px;"
         );
 
         Label name = new Label(station.getName());
@@ -200,17 +255,21 @@ public class LibraryPage extends VBox {
         card.getChildren().addAll(cover, name, info);
 
         card.setOnMouseEntered(e -> cover.setStyle(
-            "-fx-background-color: #2a2a3d; -fx-text-fill: #1db954; " +
-            "-fx-font-size: 36px; -fx-background-radius: 8px;"
+            "-fx-background-color: #2a2a3d;" +
+            "-fx-text-fill: #1db954;" +
+            "-fx-font-size: 36px;" +
+            "-fx-background-radius: 8px;"
         ));
         card.setOnMouseExited(e -> cover.setStyle(
-            "-fx-background-color: #1e1e2f; -fx-text-fill: #1db954; " +
-            "-fx-font-size: 36px; -fx-background-radius: 8px;"
+            "-fx-background-color: #1e1e2f;" +
+            "-fx-text-fill: #1db954;" +
+            "-fx-font-size: 36px;" +
+            "-fx-background-radius: 8px;"
         ));
 
         return card;
     }
-    
+
     private void applyAccentToScrollPane(ScrollPane scroll, Color accent) {
         String hex = String.format("#%02X%02X%02X",
             (int) (accent.getRed() * 255),
@@ -218,20 +277,17 @@ public class LibraryPage extends VBox {
             (int) (accent.getBlue() * 255)
         );
 
-        // Thin track + accent thumb
         scroll.setStyle(
             "-fx-background-color: transparent;" +
             "-fx-background: transparent;"
         );
 
-        // Style the thumb after the skin exists
         scroll.skinProperty().addListener((obs, oldSkin, newSkin) -> {
             if (newSkin != null) {
                 styleScrollThumb(scroll, hex);
             }
         });
 
-        // Also try immediately in case skin is already there
         styleScrollThumb(scroll, hex);
     }
 
@@ -254,7 +310,6 @@ public class LibraryPage extends VBox {
         }
     }
 
-    // Temporary mock data – replace with Spotify data later
     private List<Playlist> createMockPlaylists() {
         List<Playlist> list = new ArrayList<>();
 
@@ -262,7 +317,6 @@ public class LibraryPage extends VBox {
         liked.addTrack(new Track("t1", "Blinding Lights", "The Weeknd", null, 200000));
         liked.addTrack(new Track("t2", "Save Your Tears", "The Weeknd", null, 215000));
         liked.addTrack(new Track("t3", "Starboy", "The Weeknd", null, 230000));
-        liked.addTrack(new Track("t4", "Die For You", "The Weeknd", null, 260000));
         list.add(liked);
 
         list.add(new Playlist("2", "Chill Mix", null));

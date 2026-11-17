@@ -2,50 +2,197 @@ package com.shuffly.ui.pages;
 
 import com.shuffly.AppState;
 import com.shuffly.model.Track;
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.control.Label;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
+import javafx.util.Duration;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class QueuePage extends VBox {
 
-    public QueuePage(AppState state) {
-        setSpacing(20);
+    private final AppState state;
+    private final Runnable onQueueChanged;
+    private final VBox content = new VBox(18);
+    private Timeline refreshTimeline;
+    private String lastSignature = "";
+
+    public QueuePage(AppState state, Runnable onQueueChanged) {
+        this.state = state;
+        this.onQueueChanged = onQueueChanged;
+
+        setSpacing(0);
         setPadding(new Insets(10, 0, 20, 0));
 
-        Track current = state.queueManager.getCurrent();
-        Label nowPlaying = new Label(
-            current != null ? "Now Playing: " + current.getName() + " – " + current.getArtist()
-                            : "Nothing playing"
-        );
-        nowPlaying.setTextFill(Color.WHITE);
-        nowPlaying.setFont(Font.font("System", FontWeight.BOLD, 18));
+        content.setSpacing(18);
+        getChildren().add(content);
 
+        rebuild();
+        startAutoRefresh();
+    }
+
+    public QueuePage(AppState state) {
+        this(state, null);
+    }
+
+    private void startAutoRefresh() {
+        refreshTimeline = new Timeline(
+            new KeyFrame(Duration.millis(800), e -> {
+                String signature = buildSignature();
+                if (!signature.equals(lastSignature)) {
+                    lastSignature = signature;
+                    rebuild();
+                }
+            })
+        );
+        refreshTimeline.setCycleCount(Timeline.INDEFINITE);
+        refreshTimeline.play();
+    }
+
+    private String buildSignature() {
+        Track current = state.queueManager.getCurrent();
+        List<Track> upNext = state.queueManager.getUpNext();
+        List<Track> history = state.queueManager.getHistory();
+
+        StringBuilder sb = new StringBuilder();
+        sb.append(current == null ? "none" : current.getId()).append("|");
+        sb.append(state.isPlaying).append("|");
+        for (Track t : upNext) sb.append(t.getId()).append(",");
+        sb.append("|");
+        for (Track t : history) sb.append(t.getId()).append(",");
+        return sb.toString();
+    }
+
+    private void rebuild() {
+        content.getChildren().clear();
+
+        // ===== NOW PLAYING =====
+        Label nowTitle = new Label("Now Playing");
+        nowTitle.setTextFill(Color.WHITE);
+        nowTitle.setFont(Font.font("System", FontWeight.BOLD, 22));
+
+        VBox nowSection = new VBox(8);
+        Track current = state.queueManager.getCurrent();
+        if (current != null) {
+            nowSection.getChildren().add(createTrackRow(current, "▶", true, false));
+        } else {
+            Label empty = new Label("Nothing playing");
+            empty.setTextFill(Color.web("#b3b3b3"));
+            nowSection.getChildren().add(empty);
+        }
+
+        // ===== UP NEXT =====
         Label upNextTitle = new Label("Up Next");
         upNextTitle.setTextFill(Color.WHITE);
-        upNextTitle.setFont(Font.font("System", FontWeight.SEMI_BOLD, 16));
-        upNextTitle.setPadding(new Insets(20, 0, 8, 0));
+        upNextTitle.setFont(Font.font("System", FontWeight.SEMI_BOLD, 18));
+        upNextTitle.setPadding(new Insets(6, 0, 0, 0));
 
-        VBox upNextList = new VBox(8);
+        VBox upNextList = new VBox(6);
         List<Track> upNext = state.queueManager.getUpNext();
-
         if (upNext.isEmpty()) {
             Label empty = new Label("Queue is empty");
             empty.setTextFill(Color.web("#b3b3b3"));
             upNextList.getChildren().add(empty);
         } else {
+            int i = 1;
             for (Track track : upNext) {
-                Label row = new Label(track.getName() + "  –  " + track.getArtist());
-                row.setTextFill(Color.web("#b3b3b3"));
-                row.setFont(Font.font(14));
-                upNextList.getChildren().add(row);
+                upNextList.getChildren().add(createTrackRow(track, String.valueOf(i++), false, true));
             }
         }
 
-        getChildren().addAll(nowPlaying, upNextTitle, upNextList);
+        // ===== RECENTLY PLAYED =====
+        Label historyTitle = new Label("Recently Played");
+        historyTitle.setTextFill(Color.WHITE);
+        historyTitle.setFont(Font.font("System", FontWeight.SEMI_BOLD, 18));
+        historyTitle.setPadding(new Insets(6, 0, 0, 0));
+
+        VBox historyList = new VBox(6);
+        List<Track> history = new ArrayList<>(state.queueManager.getHistory());
+        Collections.reverse(history); // newest first
+
+        if (history.isEmpty()) {
+            Label empty = new Label("No recently played songs");
+            empty.setTextFill(Color.web("#b3b3b3"));
+            historyList.getChildren().add(empty);
+        } else {
+            for (Track track : history) {
+                historyList.getChildren().add(createTrackRow(track, "↺", false, false));
+            }
+        }
+
+        VBox allLists = new VBox(14, upNextList, historyTitle, historyList);
+
+        ScrollPane scroll = new ScrollPane(allLists);
+        scroll.setFitToWidth(true);
+        scroll.setStyle("-fx-background-color: transparent; -fx-background: transparent;");
+        scroll.setPrefHeight(430);
+        scroll.setPannable(true);
+        VBox.setVgrow(scroll, Priority.ALWAYS);
+
+        content.getChildren().addAll(nowTitle, nowSection, upNextTitle, scroll);
+    }
+
+    private HBox createTrackRow(Track track, String leftLabel, boolean isCurrent, boolean isUpNext) {
+        HBox row = new HBox(16);
+        row.setAlignment(Pos.CENTER_LEFT);
+        row.setPadding(new Insets(10, 12, 10, 12));
+        row.setStyle(isCurrent
+            ? "-fx-background-color: #282828; -fx-background-radius: 6px;"
+            : "-fx-background-radius: 6px;");
+        row.setCursor(javafx.scene.Cursor.HAND);
+
+        Label num = new Label(leftLabel);
+        num.setTextFill(isCurrent ? Color.web("#1db954") : Color.web("#b3b3b3"));
+        num.setMinWidth(28);
+        num.setFont(Font.font(13));
+
+        VBox info = new VBox(2);
+        Label name = new Label(track.getName());
+        name.setTextFill(Color.WHITE);
+        name.setFont(Font.font("System", FontWeight.SEMI_BOLD, 14));
+
+        Label artist = new Label(track.getArtist());
+        artist.setTextFill(Color.web("#b3b3b3"));
+        artist.setFont(Font.font(12));
+        info.getChildren().addAll(name, artist);
+
+        row.getChildren().addAll(num, info);
+
+        if (!isCurrent) {
+            row.setOnMouseEntered(e ->
+                row.setStyle("-fx-background-color: #282828; -fx-background-radius: 6px;")
+            );
+            row.setOnMouseExited(e ->
+                row.setStyle("-fx-background-radius: 6px;")
+            );
+        }
+
+        row.setOnMouseClicked(e -> {
+            if (isUpNext) {
+                // Jump to this song in the queue
+                state.queueManager.playNext(track);
+                state.queueManager.next();
+            } else if (!isCurrent) {
+                // From history: play it again
+                state.queueManager.playNext(track);
+                state.queueManager.next();
+            }
+            state.isPlaying = true;
+            rebuild();
+            if (onQueueChanged != null) onQueueChanged.run();
+        });
+
+        return row;
     }
 }

@@ -1,22 +1,47 @@
-.progress-slider .track {
-    -fx-background-color: #4d4d4d;
-    -fx-background-radius: 2px;
-    -fx-pref-height: 4px;
+/* Thin Spotify-like horizontal scrollbar */
+.library-scroll {
+    -fx-background-color: transparent;
+    -fx-background: transparent;
+    -fx-padding: 0;
 }
 
-.progress-slider .thumb {
-    -fx-background-color: white;
-    -fx-background-radius: 50%;
-    -fx-pref-width: 12px;
-    -fx-pref-height: 12px;
+.library-scroll .viewport {
+    -fx-background-color: transparent;
 }
 
-.progress-slider:hover .track {
+.library-scroll .scroll-bar:horizontal {
+    -fx-background-color: transparent;
+    -fx-pref-height: 10px;
+    -fx-padding: 2 0 0 0;
+}
+
+.library-scroll .scroll-bar:horizontal .track {
+    -fx-background-color: rgba(255, 255, 255, 0.08);
+    -fx-background-radius: 4px;
     -fx-pref-height: 6px;
 }
 
-.progress-slider:hover .thumb {
-    -fx-pref-width: 14px;
-    -fx-pref-height: 14px;
-    -fx-background-color: #1db954;
+.library-scroll .scroll-bar:horizontal .thumb {
+    -fx-background-color: rgba(255, 255, 255, 0.35);
+    -fx-background-radius: 4px;
+    -fx-pref-height: 6px;
+    -fx-background-insets: 0;
+}
+
+.library-scroll .scroll-bar:horizontal .thumb:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.55);
+}
+
+.library-scroll .scroll-bar:horizontal .increment-button,
+.library-scroll .scroll-bar:horizontal .decrement-button {
+    -fx-padding: 0;
+    -fx-pref-width: 0;
+    -fx-pref-height: 0;
+    -fx-background-color: transparent;
+    -fx-shape: null;
+}
+
+.library-scroll .scroll-bar:vertical {
+    -fx-pref-width: 0;
+    -fx-opacity: 0;
 }
