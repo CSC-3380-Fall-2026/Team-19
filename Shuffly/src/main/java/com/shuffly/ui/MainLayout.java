@@ -32,7 +32,9 @@ public class MainLayout extends BorderPane {
 
         switch (pageName) {
             case "Home" -> contentArea.getChildren().add(new HomePage(state));
-            case "Search" -> contentArea.getChildren().add(new SearchPage());
+            case "Search" -> contentArea.getChildren().add(
+            	    new com.shuffly.ui.pages.SearchPage(state)
+            	);
             case "Library" -> contentArea.getChildren().add(
                 new LibraryPage(state, playlist -> {
                     // playlist clicked
@@ -46,7 +48,9 @@ public class MainLayout extends BorderPane {
                     sidebar.select("Library");
                 })
             );
-            case "Queue" -> contentArea.getChildren().add(new QueuePage(state));
+            case "Queue" -> {
+                contentArea.getChildren().add(new QueuePage(state, playerBar::refresh));
+            }
             case "Shuffle Mode" -> contentArea.getChildren().add(
                 new ShuffleModePage(state, playerBar::refresh)
             );

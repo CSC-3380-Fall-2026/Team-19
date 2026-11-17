@@ -1,7 +1,16 @@
 package com.shuffly.ui;
 
+import java.util.List;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+
 import com.shuffly.AppState;
 import com.shuffly.model.Track;
+import com.shuffly.spotify.SpotifyApiClient;
+import com.shuffly.spotify.SpotifyAuth;
+
+import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
@@ -21,6 +30,11 @@ public class PlayerBar extends HBox {
     private final Label artistNameLabel;
     private final Label shuffleLabel;
     private final Button playBtn;
+    private Slider progressSlider;
+    private Label currentTimeLabel;
+    private Label totalTimeLabel;
+    private javafx.animation.Timeline progressTimeline;
+    private boolean isSeeking = false;
 
     public PlayerBar(AppState state) {
         this.state = state;
@@ -62,44 +76,87 @@ public class PlayerBar extends HBox {
         Button nextBtn = controlButton("⏭");
 
         prevBtn.setOnAction(e -> {
-            state.queueManager.previous();
-            refresh();
+            Track track = state.queueManager.previous();
+            new Thread(() -> {
+                try {
+                    SpotifyApiClient api = new SpotifyApiClient();
+                    String deviceId = api.getActiveDeviceId();
+                    if (track != null) {
+                        api.playTracks(List.of(track.getId()), deviceId);
+                    } else {
+                        api.previous(deviceId);
+                    }
+                    Platform.runLater(this::refresh);
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+            }).start();
         });
         nextBtn.setOnAction(e -> {
-            state.queueManager.next();
-            refresh();
+            Track track = state.queueManager.next();
+            new Thread(() -> {
+                try {
+                    SpotifyApiClient api = new SpotifyApiClient();
+                    String deviceId = api.getActiveDeviceId();
+                    if (track != null) {
+                        api.playTracks(List.of(track.getId()), deviceId);
+                    } else {
+                        api.next(deviceId);
+                    }
+                    Platform.runLater(this::refresh);
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+            }).start();
         });
         playBtn.setOnAction(e -> {
-            Track current = state.queueManager.getCurrent();
-            if (current == null) {
-                if (!state.queueManager.getUpNext().isEmpty()) {
-                    state.queueManager.next();
-                    state.isPlaying = true;
+            new Thread(() -> {
+                try {
+                    SpotifyApiClient api = new SpotifyApiClient();
+                    String deviceId = api.getActiveDeviceId();
+
+                    if (state.isPlaying) {
+                        // Pause — keep current position
+                        api.pause(deviceId);
+                        state.isPlaying = false;
+                    } else {
+                        // Resume from current position (do NOT call playTracks here)
+                        api.resume(deviceId);
+                        state.isPlaying = true;
+                    }
+
+                    Platform.runLater(this::refresh);
+                } catch (Exception ex) {
+                    ex.printStackTrace();
                 }
-            } else {
-                state.isPlaying = !state.isPlaying;
-            }
-            refresh();
+            }).start();
         });
 
         HBox controls = new HBox(20, prevBtn, playBtn, nextBtn);
         controls.setAlignment(Pos.CENTER);
 
-        Label currentTime = new Label("0:00");
-        currentTime.setTextFill(Color.web("#b3b3b3"));
-        currentTime.setFont(Font.font(11));
-        currentTime.setMinWidth(35);
+        currentTimeLabel = new Label("0:00");
+        currentTimeLabel.setTextFill(Color.web("#b3b3b3"));
+        currentTimeLabel.setFont(Font.font(11));
+        currentTimeLabel.setMinWidth(35);
 
-        Slider slider = new Slider(0, 100, 30);
-        slider.setPrefWidth(400);
-        slider.setStyle("-fx-control-inner-background: #4d4d4d;");
+        progressSlider = new Slider(0, 100, 0);
+        progressSlider.setPrefWidth(400);
+        progressSlider.setStyle("-fx-control-inner-background: #4d4d4d;");
 
-        Label totalTime = new Label("3:45");
-        totalTime.setTextFill(Color.web("#b3b3b3"));
-        totalTime.setFont(Font.font(11));
-        totalTime.setMinWidth(35);
+        totalTimeLabel = new Label("0:00");
+        totalTimeLabel.setTextFill(Color.web("#b3b3b3"));
+        totalTimeLabel.setFont(Font.font(11));
+        totalTimeLabel.setMinWidth(35);
 
-        HBox progress = new HBox(10, currentTime, slider, totalTime);
+        // User dragging seek bar
+        progressSlider.setOnMousePressed(e -> isSeeking = true);
+        progressSlider.setOnMouseReleased(e -> {
+            isSeeking = false;
+            seekToSliderPosition();
+        });
+
+        HBox progress = new HBox(10, currentTimeLabel, progressSlider, totalTimeLabel);
         progress.setAlignment(Pos.CENTER);
 
         center.getChildren().addAll(controls, progress);
@@ -115,6 +172,7 @@ public class PlayerBar extends HBox {
         right.setPrefWidth(220);
 
         getChildren().addAll(left, center, right);
+        startProgressUpdates();
     }
 
     public void refresh() {
@@ -159,5 +217,95 @@ public class PlayerBar extends HBox {
             "-fx-cursor: hand; -fx-padding: 8; -fx-focus-color: transparent; -fx-faint-focus-color: transparent;"
         ));
         return btn;
+    }
+    
+    private String formatTime(long ms) {
+        long totalSec = ms / 1000;
+        long min = totalSec / 60;
+        long sec = totalSec % 60;
+        return String.format("%d:%02d", min, sec);
+    }
+
+    private void seekToSliderPosition() {
+        if (!SpotifyAuth.isLoggedIn()) return;
+
+        new Thread(() -> {
+            try {
+                SpotifyApiClient api = new SpotifyApiClient();
+                JSONObject playing = api.getCurrentlyPlaying();
+                if (playing == null) return;
+
+                JSONObject item = playing.optJSONObject("item");
+                if (item == null) return;
+
+                long duration = item.optLong("duration_ms", 0);
+                long position = (long) (progressSlider.getValue() / 100.0 * duration);
+
+                String deviceId = api.getActiveDeviceId();
+                api.seek(position, deviceId);
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+        }).start();
+    }
+
+    public void startProgressUpdates() {
+        if (progressTimeline != null) {
+            progressTimeline.stop();
+        }
+
+        progressTimeline = new javafx.animation.Timeline(
+            new javafx.animation.KeyFrame(
+                javafx.util.Duration.seconds(1),
+                e -> pollPlaybackState()
+            )
+        );
+        progressTimeline.setCycleCount(javafx.animation.Animation.INDEFINITE);
+        progressTimeline.play();
+    }
+
+    private void pollPlaybackState() {
+        if (!SpotifyAuth.isLoggedIn() || isSeeking) return;
+
+        new Thread(() -> {
+            try {
+                SpotifyApiClient api = new SpotifyApiClient();
+                JSONObject playing = api.getCurrentlyPlaying();
+
+                Platform.runLater(() -> {
+                    if (playing == null) {
+                        currentTimeLabel.setText("0:00");
+                        totalTimeLabel.setText("0:00");
+                        progressSlider.setValue(0);
+                        return;
+                    }
+
+                    boolean isPlayingNow = playing.optBoolean("is_playing", false);
+                    long progressMs = playing.optLong("progress_ms", 0);
+
+                    JSONObject item = playing.optJSONObject("item");
+                    if (item != null) {
+                        long durationMs = item.optLong("duration_ms", 1);
+                        String name = item.optString("name", "Unknown");
+                        String artist = "Unknown";
+                        JSONArray artists = item.optJSONArray("artists");
+                        if (artists != null && artists.length() > 0) {
+                            artist = artists.getJSONObject(0).optString("name", artist);
+                        }
+
+                        songTitleLabel.setText(name);
+                        artistNameLabel.setText(artist);
+                        currentTimeLabel.setText(formatTime(progressMs));
+                        totalTimeLabel.setText(formatTime(durationMs));
+                        progressSlider.setValue(100.0 * progressMs / durationMs);
+
+                        state.isPlaying = isPlayingNow;
+                        playBtn.setText(isPlayingNow ? "⏸" : "▶");
+                    }
+                });
+            } catch (Exception ex) {
+                // avoid spamming console every second
+            }
+        }).start();
     }
 }

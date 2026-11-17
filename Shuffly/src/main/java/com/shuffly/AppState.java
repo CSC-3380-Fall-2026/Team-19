@@ -16,6 +16,7 @@ public class AppState {
     public Color accentColor = Color.web("#1db954");
     public String currentShuffleMode = "Mood-based";
     public Playlist selectedPlaylist = null;
+    public String selectedMood = "Chill"; // default
     
     public List<Playlist> playlists = new ArrayList<>();
     public List<Track> likedSongs = new ArrayList<>();

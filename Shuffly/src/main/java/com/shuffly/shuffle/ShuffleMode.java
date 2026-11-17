@@ -1,4 +1,4 @@
-package com.shuffly;
+package com.shuffly.shuffle;
 
 public enum ShuffleMode {
     MOOD_BASED("Mood-based", new TrulyRandomShuffle()),         // placeholder 
