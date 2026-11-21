@@ -80,10 +80,14 @@ public class QueueManager<T> {
 
     // Loads a playlist of Tracks, ordered by the currently selected shuffle mode
     @SuppressWarnings("unchecked")
-    public void loadShuffled(List<Track> songs) {
-        // grab history first, because loadPlaylist() clears it
+    public void loadShuffled(List<Track> songs, String mood) {
         List<Track> recent = new ArrayList<>((List<Track>) (List<?>) history);
-        List<Track> ordered = shuffleMode.getStrategy().shuffle(songs, recent);
+
+        ShuffleStrategy strategy = (shuffleMode == ShuffleMode.MOOD_BASED)
+            ? new MoodBasedShuffle(mood)
+            : shuffleMode.getStrategy();
+
+        List<Track> ordered = strategy.shuffle(songs, recent);
         loadPlaylist((List<T>) (List<?>) ordered, false);
     }
 }

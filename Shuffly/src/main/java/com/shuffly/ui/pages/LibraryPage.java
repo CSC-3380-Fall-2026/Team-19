@@ -3,18 +3,13 @@ package com.shuffly.ui.pages;
 import com.shuffly.AppState;
 import com.shuffly.model.Playlist;
 import com.shuffly.model.Station;
-import com.shuffly.model.Track;
 import com.shuffly.spotify.SpotifyService;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
-import javafx.scene.control.TextInputDialog;
 import javafx.scene.layout.HBox;
-import javafx.scene.layout.Priority;
-import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
@@ -22,8 +17,6 @@ import javafx.scene.text.FontWeight;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
 import java.util.function.Consumer;
 
 public class LibraryPage extends VBox {
@@ -44,9 +37,7 @@ public class LibraryPage extends VBox {
     private void rebuildLibraryContent() {
         getChildren().clear();
 
-        List<Playlist> playlists = (state.spotifyConnected || !state.playlists.isEmpty())
-            ? state.playlists
-            : createMockPlaylists();
+        List<Playlist> playlists = state.playlists;
 
         // ===== PLAYLISTS =====
         VBox playlistsSection = new VBox(16);
@@ -57,23 +48,8 @@ public class LibraryPage extends VBox {
         Label playlistsTitle = new Label("Playlists");
         playlistsTitle.setTextFill(Color.WHITE);
         playlistsTitle.setFont(Font.font("System", FontWeight.BOLD, 22));
-
-        Region headerSpacer = new Region();
-        HBox.setHgrow(headerSpacer, Priority.ALWAYS);
-
-        Button createBtn = new Button("+ Create Playlist");
-        createBtn.setStyle(
-            "-fx-background-color: #1db954;" +
-            "-fx-text-fill: black;" +
-            "-fx-font-size: 13px;" +
-            "-fx-font-weight: bold;" +
-            "-fx-background-radius: 20px;" +
-            "-fx-padding: 8 16;" +
-            "-fx-cursor: hand;"
-        );
-        createBtn.setOnAction(e -> createNewPlaylist());
-
-        libraryHeader.getChildren().addAll(playlistsTitle, headerSpacer, createBtn);
+        
+        libraryHeader.getChildren().addAll(playlistsTitle);
 
         HBox playlistCards = new HBox(18);
         playlistCards.setAlignment(Pos.CENTER_LEFT);
@@ -127,27 +103,6 @@ public class LibraryPage extends VBox {
         stationsSection.getChildren().addAll(stationsTitle, stationScroll);
 
         getChildren().addAll(playlistsSection, stationsSection);
-    }
-
-    private void createNewPlaylist() {
-        TextInputDialog dialog = new TextInputDialog();
-        dialog.setTitle("Create Playlist");
-        dialog.setHeaderText("New Playlist");
-        dialog.setContentText("Playlist name:");
-
-        Optional<String> result = dialog.showAndWait();
-        if (result.isEmpty()) return;
-
-        String name = result.get().trim();
-        if (name.isEmpty()) return;
-
-        String id = "local-" + UUID.randomUUID();
-        Playlist newPlaylist = new Playlist(id, name, null);
-
-        // Keep newest first
-        state.playlists.add(0, newPlaylist);
-
-        rebuildLibraryContent();
     }
 
     private VBox createPlaylistCard(Playlist playlist) {
@@ -205,7 +160,7 @@ public class LibraryPage extends VBox {
 
                     Platform.runLater(() -> {
                         if (!playlist.getTracks().isEmpty()) {
-                            state.queueManager.loadShuffled(playlist.getTracks());
+                        	state.queueManager.loadShuffled(playlist.getTracks(), state.selectedMood);
                             state.isPlaying = true;
                         }
                         state.selectedPlaylist = playlist;
@@ -308,23 +263,6 @@ public class LibraryPage extends VBox {
                 "-fx-background-radius: 4px;"
             );
         }
-    }
-
-    private List<Playlist> createMockPlaylists() {
-        List<Playlist> list = new ArrayList<>();
-
-        Playlist liked = new Playlist("1", "Liked Songs", null);
-        liked.addTrack(new Track("t1", "Blinding Lights", "The Weeknd", null, 200000));
-        liked.addTrack(new Track("t2", "Save Your Tears", "The Weeknd", null, 215000));
-        liked.addTrack(new Track("t3", "Starboy", "The Weeknd", null, 230000));
-        list.add(liked);
-
-        list.add(new Playlist("2", "Chill Mix", null));
-        list.add(new Playlist("3", "Focus Flow", null));
-        list.add(new Playlist("4", "Late Night", null));
-        list.add(new Playlist("5", "Workout", null));
-
-        return list;
     }
 
     private List<Station> createMockStations() {
