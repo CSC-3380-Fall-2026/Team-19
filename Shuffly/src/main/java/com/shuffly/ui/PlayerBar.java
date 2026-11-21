@@ -35,6 +35,8 @@ public class PlayerBar extends HBox {
     private Label totalTimeLabel;
     private javafx.animation.Timeline progressTimeline;
     private boolean isSeeking = false;
+    private boolean stationAdvanceInProgress = false;
+    private boolean playlistAdvanceInProgress = false;
 
     public PlayerBar(AppState state) {
         this.state = state;
@@ -76,34 +78,69 @@ public class PlayerBar extends HBox {
         Button nextBtn = controlButton("⏭");
 
         prevBtn.setOnAction(e -> {
-            Track track = state.queueManager.previous();
+
+            Track track;
+
+            if (state.stationMode) {
+                // Go back to the previous station track
+                track = state.stationPlayer.getPreviousTrack();
+            } else {
+                // Normal playlist playback
+                track = state.queueManager.previous();
+            }
+
+            if (track == null && state.stationMode) {
+                return;
+            }
+
             new Thread(() -> {
                 try {
                     SpotifyApiClient api = new SpotifyApiClient();
                     String deviceId = api.getActiveDeviceId();
+
                     if (track != null) {
                         api.playTracks(List.of(track.getId()), deviceId);
                     } else {
                         api.previous(deviceId);
                     }
+
                     Platform.runLater(this::refresh);
+
                 } catch (Exception ex) {
                     ex.printStackTrace();
                 }
             }).start();
         });
         nextBtn.setOnAction(e -> {
-            Track track = state.queueManager.next();
+
+            Track track;
+
+            if (state.stationMode) {
+                // Get the next randomized station track
+                track = state.stationPlayer.getNextTrack();
+            } else {
+                // Normal playlist playback
+                track = state.queueManager.next();
+            }
+
+            // Don't fall back to Spotify's regular queue in Station Mode
+            if (track == null && state.stationMode) {
+                return;
+            }
+
             new Thread(() -> {
                 try {
                     SpotifyApiClient api = new SpotifyApiClient();
                     String deviceId = api.getActiveDeviceId();
+
                     if (track != null) {
                         api.playTracks(List.of(track.getId()), deviceId);
                     } else {
                         api.next(deviceId);
                     }
+
                     Platform.runLater(this::refresh);
+
                 } catch (Exception ex) {
                     ex.printStackTrace();
                 }
@@ -176,7 +213,15 @@ public class PlayerBar extends HBox {
     }
 
     public void refresh() {
-        Track current = state.queueManager.getCurrent();
+
+        Track current;
+
+        if (state.stationMode) {
+            current = state.stationPlayer.getCurrentTrack();
+        } else {
+            current = state.queueManager.getCurrent();
+        }
+
         if (current != null) {
             songTitleLabel.setText(current.getName());
             artistNameLabel.setText(current.getArtist());
@@ -187,7 +232,13 @@ public class PlayerBar extends HBox {
         }
 
         playBtn.setText(state.isPlaying ? "⏸" : "▶");
-        shuffleLabel.setText("Shuffle: " + state.currentShuffleMode);
+
+        if (state.stationMode && state.selectedStation != null) {
+            shuffleLabel.setText("Station: " + state.selectedStation.getName());
+        } else {
+            shuffleLabel.setText("Shuffle: " + state.currentShuffleMode);
+        }
+
         shuffleLabel.setTextFill(state.accentColor);
     }
 
@@ -263,6 +314,90 @@ public class PlayerBar extends HBox {
         progressTimeline.setCycleCount(javafx.animation.Animation.INDEFINITE);
         progressTimeline.play();
     }
+    
+    private void advanceStation() {
+
+        if (!state.stationMode || stationAdvanceInProgress) {
+            return;
+        }
+
+        stationAdvanceInProgress = true;
+
+        Track nextTrack = state.stationPlayer.getNextTrack();
+
+        if (nextTrack == null) {
+            stationAdvanceInProgress = false;
+            return;
+        }
+
+        new Thread(() -> {
+            try {
+                SpotifyApiClient api = new SpotifyApiClient();
+                String deviceId = api.getActiveDeviceId();
+
+                api.playTracks(
+                    List.of(nextTrack.getId()),
+                    deviceId
+                );
+
+                Platform.runLater(() -> {
+                    state.isPlaying = true;
+                    stationAdvanceInProgress = false;
+                    refresh();
+                });
+
+            } catch (Exception ex) {
+                ex.printStackTrace();
+
+                Platform.runLater(() -> {
+                    stationAdvanceInProgress = false;
+                });
+            }
+        }).start();
+    }
+    
+    private void advancePlaylist() {
+
+        if (state.stationMode || playlistAdvanceInProgress) {
+            return;
+        }
+
+        playlistAdvanceInProgress = true;
+
+        Track nextTrack = state.queueManager.next();
+
+        if (nextTrack == null) {
+            playlistAdvanceInProgress = false;
+            state.isPlaying = false;
+            Platform.runLater(this::refresh);
+            return;
+        }
+
+        new Thread(() -> {
+            try {
+                SpotifyApiClient api = new SpotifyApiClient();
+                String deviceId = api.getActiveDeviceId();
+
+                api.playTracks(
+                    List.of(nextTrack.getId()),
+                    deviceId
+                );
+
+                Platform.runLater(() -> {
+                    state.isPlaying = true;
+                    playlistAdvanceInProgress = false;
+                    refresh();
+                });
+
+            } catch (Exception ex) {
+                ex.printStackTrace();
+
+                Platform.runLater(() -> {
+                    playlistAdvanceInProgress = false;
+                });
+            }
+        }).start();
+    }
 
     private void pollPlaybackState() {
         if (!SpotifyAuth.isLoggedIn() || isSeeking) return;
@@ -287,6 +422,17 @@ public class PlayerBar extends HBox {
                     if (item != null) {
                         long durationMs = item.optLong("duration_ms", 1);
                         String name = item.optString("name", "Unknown");
+                        // Automatically advance when a song is nearly finished.
+                        if (isPlayingNow
+                                && durationMs > 0
+                                && progressMs >= durationMs - 1500) {
+
+                            if (state.stationMode && !stationAdvanceInProgress) {
+                                advanceStation();
+                            } else if (!state.stationMode && !playlistAdvanceInProgress) {
+                                advancePlaylist();
+                            }
+                        }
                         String artist = "Unknown";
                         JSONArray artists = item.optJSONArray("artists");
                         if (artists != null && artists.length() > 0) {
