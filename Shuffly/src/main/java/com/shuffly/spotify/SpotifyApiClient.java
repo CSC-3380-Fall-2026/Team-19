@@ -216,20 +216,4 @@ public class SpotifyApiClient {
         }
         return new JSONObject(response.body());
     }
-    
-    /** Fetch up to 50 artists at once: GET /v1/artists?ids=... */
-    public JSONArray getArtists(List<String> artistIds) throws Exception {
-        if (artistIds == null || artistIds.isEmpty()) return new JSONArray();
-
-        // Spotify allows max 50 ids per request
-        String ids = String.join(",", artistIds.stream().limit(50).toList());
-        HttpRequest request = authedRequest("/artists?ids=" + ids).GET().build();
-        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-
-        if (response.statusCode() != 200) {
-            System.err.println("getArtists failed: " + response.body());
-            return new JSONArray();
-        }
-        return new JSONObject(response.body()).getJSONArray("artists");
-    }
 }

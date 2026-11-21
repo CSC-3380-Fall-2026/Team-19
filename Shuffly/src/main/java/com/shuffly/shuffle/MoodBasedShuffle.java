@@ -1,80 +1,86 @@
+
 package com.shuffly.shuffle;
 
 import com.shuffly.model.Track;
-import java.util.*;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Locale;
 
 public class MoodBasedShuffle implements ShuffleStrategy {
 
     private final String mood;
 
     public MoodBasedShuffle(String mood) {
-        this.mood = mood == null ? "chill" : mood.toLowerCase();
+        this.mood = normalizeMood(mood);
     }
-
-    // genre keywords per mood
-    private static final Map<String, List<String>> MOOD_GENRES = Map.of(
-        "happy", List.of("pop", "dance", "indie pop", "funk", "disco"),
-        "chill", List.of("ambient", "lo-fi", "chill", "acoustic", "indie", "soft"),
-        "sad", List.of("sad", "emo", "singer-songwriter", "alternative", "soul"),
-        "energetic", List.of("edm", "rock", "hip hop", "pop rap", "metal", "punk"),
-        "focus", List.of("ambient", "classical", "lo-fi", "instrumental", "study"),
-        "party", List.of("dance", "edm", "pop", "hip hop", "reggaeton", "house"),
-        "romantic", List.of("r&b", "soul", "pop", "indie", "jazz"),
-        "angry", List.of("metal", "punk", "hard rock", "rap", "industrial")
-    );
 
     @Override
     public List<Track> shuffle(List<Track> songs, List<Track> recentlyPlayed) {
-        List<Track> scored = new ArrayList<>(songs);
 
-        scored.sort((a, b) -> Double.compare(score(b), score(a))); // high score first
+        List<Track> result = new ArrayList<>(songs);
 
-        // light shuffle within tiers so it doesn't feel rigid
-        return softShuffleByScore(scored);
+        // Put the best mood matches first
+        result.sort(Comparator.comparingInt(this::score).reversed());
+
+        // Randomize songs that have the same score
+        int start = 0;
+
+        while (start < result.size()) {
+            int currentScore = score(result.get(start));
+            int end = start + 1;
+
+            while (end < result.size()
+                    && score(result.get(end)) == currentScore) {
+                end++;
+            }
+
+            Collections.shuffle(result.subList(start, end));
+            start = end;
+        }
+
+        return result;
     }
 
-    private double score(Track t) {
-        double score = 0;
-        List<String> keywords = MOOD_GENRES.getOrDefault(normalizeMood(mood), MOOD_GENRES.get("chill"));
+    private int score(Track track) {
 
-        for (String genre : t.getGenres()) {
-            for (String key : keywords) {
-                if (genre.contains(key)) score += 3;
+        if (track == null) {
+            return 0;
+        }
+
+        for (String tag : track.getMoodTags()) {
+            if (normalizeMood(tag).equals(mood)) {
+                return 10;
             }
         }
 
-        // popularity bias by mood
-        int pop = t.getPopularity();
-        switch (normalizeMood(mood)) {
-            case "party", "energetic", "happy" -> score += pop / 20.0;
-            case "chill", "focus", "sad" -> score += (100 - pop) / 25.0;
-            default -> score += 1;
-        }
-
-        return score;
+        return 0;
     }
 
     private String normalizeMood(String raw) {
-        String m = raw.toLowerCase();
+
+        if (raw == null) {
+            return "chill";
+        }
+
+        String m = raw.toLowerCase(Locale.ROOT);
+
         if (m.contains("happy") || m.contains("joy")) return "happy";
-        if (m.contains("chill") || m.contains("calm") || m.contains("relax")) return "chill";
-        if (m.contains("sad") || m.contains("down") || m.contains("blue")) return "sad";
-        if (m.contains("energy") || m.contains("hype") || m.contains("workout")) return "energetic";
-        if (m.contains("focus") || m.contains("study") || m.contains("work")) return "focus";
+        if (m.contains("chill") || m.contains("calm")
+                || m.contains("relax")) return "chill";
+        if (m.contains("sad") || m.contains("down")
+                || m.contains("blue")) return "sad";
+        if (m.contains("energy") || m.contains("hype")
+                || m.contains("workout")) return "energetic";
+        if (m.contains("focus") || m.contains("study")
+                || m.contains("work")) return "focus";
         if (m.contains("party") || m.contains("club")) return "party";
         if (m.contains("love") || m.contains("romance")) return "romantic";
-        if (m.contains("angry") || m.contains("mad") || m.contains("rage")) return "angry";
-        return "chill";
-    }
+        if (m.contains("angry") || m.contains("mad")
+                || m.contains("rage")) return "angry";
 
-    private List<Track> softShuffleByScore(List<Track> ranked) {
-        // keep general order, shuffle small windows
-        List<Track> result = new ArrayList<>(ranked);
-        Random r = new Random();
-        for (int i = 0; i < result.size(); i += 4) {
-            int end = Math.min(i + 4, result.size());
-            Collections.shuffle(result.subList(i, end), r);
-        }
-        return result;
+        return m;
     }
 }
