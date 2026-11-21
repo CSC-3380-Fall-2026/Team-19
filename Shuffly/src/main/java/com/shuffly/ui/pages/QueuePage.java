@@ -2,13 +2,12 @@ package com.shuffly.ui.pages;
 
 import com.shuffly.AppState;
 import com.shuffly.model.Track;
+import com.shuffly.ui.TrackRow;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.geometry.Insets;
-import javafx.geometry.Pos;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
-import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
@@ -66,11 +65,24 @@ public class QueuePage extends VBox {
         List<Track> history = state.queueManager.getHistory();
 
         StringBuilder sb = new StringBuilder();
-        sb.append(current == null ? "none" : current.getId()).append("|");
+        sb.append(current == null
+                ? "none"
+                : current.getId() + current.getMoodTags())
+          .append("|");
         sb.append(state.isPlaying).append("|");
-        for (Track t : upNext) sb.append(t.getId()).append(",");
+        for (Track t : upNext) {
+            sb.append(t.getId())
+              .append(t.getMoodTags())
+              .append(",");
+        }
+
         sb.append("|");
-        for (Track t : history) sb.append(t.getId()).append(",");
+
+        for (Track t : history) {
+            sb.append(t.getId())
+              .append(t.getMoodTags())
+              .append(",");
+        }
         return sb.toString();
     }
 
@@ -143,56 +155,26 @@ public class QueuePage extends VBox {
         content.getChildren().addAll(nowTitle, nowSection, upNextTitle, scroll);
     }
 
-    private HBox createTrackRow(Track track, String leftLabel, boolean isCurrent, boolean isUpNext) {
-        HBox row = new HBox(16);
-        row.setAlignment(Pos.CENTER_LEFT);
-        row.setPadding(new Insets(10, 12, 10, 12));
-        row.setStyle(isCurrent
-            ? "-fx-background-color: #282828; -fx-background-radius: 6px;"
-            : "-fx-background-radius: 6px;");
-        row.setCursor(javafx.scene.Cursor.HAND);
 
-        Label num = new Label(leftLabel);
-        num.setTextFill(isCurrent ? Color.web("#1db954") : Color.web("#b3b3b3"));
-        num.setMinWidth(28);
-        num.setFont(Font.font(13));
-
-        VBox info = new VBox(2);
-        Label name = new Label(track.getName());
-        name.setTextFill(Color.WHITE);
-        name.setFont(Font.font("System", FontWeight.SEMI_BOLD, 14));
-
-        Label artist = new Label(track.getArtist());
-        artist.setTextFill(Color.web("#b3b3b3"));
-        artist.setFont(Font.font(12));
-        info.getChildren().addAll(name, artist);
-
-        row.getChildren().addAll(num, info);
-
-        if (!isCurrent) {
-            row.setOnMouseEntered(e ->
-                row.setStyle("-fx-background-color: #282828; -fx-background-radius: 6px;")
-            );
-            row.setOnMouseExited(e ->
-                row.setStyle("-fx-background-radius: 6px;")
-            );
-        }
-
-        row.setOnMouseClicked(e -> {
-            if (isUpNext) {
-                // Jump to this song in the queue
-                state.queueManager.playNext(track);
-                state.queueManager.next();
-            } else if (!isCurrent) {
-                // From history: play it again
-                state.queueManager.playNext(track);
-                state.queueManager.next();
-            }
-            state.isPlaying = true;
-            rebuild();
-            if (onQueueChanged != null) onQueueChanged.run();
-        });
-
-        return row;
-    }
+	private TrackRow createTrackRow(Track track, String leftLabel, boolean isCurrent, boolean isUpNext) {
+			return new TrackRow(
+		        track,
+		        leftLabel,
+		        isCurrent,
+		        () -> {
+		            if (!isCurrent) {
+		                // Play this song next, whether it came from
+		                // Up Next or Recently Played.
+		                state.queueManager.playNext(track);
+		                state.queueManager.next();
+	            }
+	
+	            state.isPlaying = true;
+	
+	            if (onQueueChanged != null) {
+	                onQueueChanged.run();
+	            }
+	        }
+	    );
+	}
 }

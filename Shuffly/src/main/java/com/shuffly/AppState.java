@@ -14,7 +14,7 @@ public class AppState {
     public boolean spotifyConnected = false;
     public String spotifyUserName = null;
     public Color accentColor = Color.web("#1db954");
-    public String currentShuffleMode = "Mood-based";
+    public String currentShuffleMode = "Truly Random";
     public Playlist selectedPlaylist = null;
     public String selectedMood = "Chill"; // default
     

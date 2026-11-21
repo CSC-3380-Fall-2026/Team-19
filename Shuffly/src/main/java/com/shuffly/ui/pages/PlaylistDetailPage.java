@@ -63,7 +63,7 @@ public class PlaylistDetailPage extends VBox {
         );
         playAllBtn.setOnAction(e -> {
             if (playlist != null && !playlist.getTracks().isEmpty()) {
-                state.queueManager.loadShuffled(playlist.getTracks());
+            	state.queueManager.loadShuffled(playlist.getTracks(), state.selectedMood);
                 state.isPlaying = true;
             }
         });
