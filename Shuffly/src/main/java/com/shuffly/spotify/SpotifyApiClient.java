@@ -8,6 +8,8 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.List;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
 public class SpotifyApiClient {
 
@@ -126,17 +128,53 @@ public class SpotifyApiClient {
     }
 
     /**
-     * Returns all tracks inside a specific playlist.
-     */
-    public JSONArray getPlaylistTracks(String playlistId)
-            throws Exception {
+ * Returns all tracks inside a specific playlist.
+ */
+public JSONArray getPlaylistTracks(String playlistId)
+        throws Exception {
 
-        return getAllPages(
-            "/playlists/" + playlistId + "/tracks?limit=50",
-            "getPlaylistTracks",
-            true
+    return getAllPages(
+        "/playlists/" + playlistId + "/tracks?limit=50",
+        "getPlaylistTracks",
+        true
+    );
+} // Closes getPlaylistTracks()
+
+
+/**
+ * Searches Spotify's catalog for tracks matching a query.
+ */
+public JSONArray searchTracks(String query) throws Exception {
+
+    String encodedQuery = URLEncoder.encode(
+        query,
+        StandardCharsets.UTF_8
+    );
+
+    String path = "/search?q=" + encodedQuery
+        + "&type=track&limit=20";
+
+    HttpRequest request = authedRequest(path)
+        .GET()
+        .build();
+
+    HttpResponse<String> response =
+        client.send(request, HttpResponse.BodyHandlers.ofString());
+
+    if (response.statusCode() != 200) {
+        System.err.println(
+            "searchTracks failed: "
+                + response.statusCode() + " "
+                + response.body()
         );
+
+        return new JSONArray();
     }
+
+    JSONObject json = new JSONObject(response.body());
+
+    return json.getJSONObject("tracks").getJSONArray("items");
+}
 
     /** Get the user's active Spotify devices. */
     public JSONArray getDevices() throws Exception {

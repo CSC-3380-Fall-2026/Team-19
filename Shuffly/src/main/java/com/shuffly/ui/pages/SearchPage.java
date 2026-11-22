@@ -18,6 +18,10 @@ import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
+import javafx.application.Platform;
+import javafx.concurrent.Task;
+import javafx.animation.PauseTransition;
+import javafx.util.Duration;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -29,6 +33,8 @@ public class SearchPage extends VBox {
     private final AppState state;
     private final VBox resultsContainer = new VBox(6);
     private final Runnable onPlayed;
+    private int searchRequestId = 0;
+
 
     public SearchPage(AppState state) {
         this(state, null);
@@ -83,10 +89,19 @@ public class SearchPage extends VBox {
 
         VBox.setVgrow(scroll, Priority.ALWAYS);
 
-        // Live search functionality
+       // Live search with a short delay to avoid excessive API requests
+        PauseTransition searchDelay = new PauseTransition(
+        Duration.millis(350));
+
         searchField.textProperty().addListener((obs, oldVal, newVal) -> {
-            updateResults(newVal);
-        });
+        searchRequestId++;
+
+        searchDelay.setOnFinished(e ->
+        updateResults(searchField.getText())
+        );
+
+     searchDelay.playFromStart();
+    });
 
         // Initial empty state
         showMessage("Start typing to search your library");
@@ -101,45 +116,43 @@ public class SearchPage extends VBox {
     }
 
     // Search through liked songs and playlists
+    // Search Spotify's catalog in the background
     private void updateResults(String query) {
 
-        resultsContainer.getChildren().clear();
+     resultsContainer.getChildren().clear();
 
-        if (query == null || query.isBlank()) {
-            showMessage("Start typing to search your library");
+     if (query == null || query.isBlank()) {
+        showMessage("Start typing to search Spotify");
+        return;
+        }
+
+        int requestId = searchRequestId;
+
+     showMessage("Searching Spotify...");
+
+        Task<List<Track>> searchTask = new Task<>() {
+            @Override
+         protected List<Track> call() throws Exception {
+            return state.spotifyService.searchTracks(query.trim());
+        }
+    };
+
+     searchTask.setOnSucceeded(event -> {
+
+        // Ignore outdated search results
+        if (requestId != searchRequestId) {
             return;
         }
 
-        String q = query.toLowerCase().trim();
+        resultsContainer.getChildren().clear();
 
-        // Store matching tracks without duplicates
-        Map<String, Track> found = new LinkedHashMap<>();
+        List<Track> matches = searchTask.getValue();
 
-        // Search liked songs
-        for (Track track : state.likedSongs) {
-            if (matchesQuery(track, q)) {
-                found.put(track.getId(), track);
-            }
-        }
-
-        // Search all playlists
-        for (Playlist playlist : state.playlists) {
-            for (Track track : playlist.getTracks()) {
-                if (matchesQuery(track, q)) {
-                    found.put(track.getId(), track);
-                }
-            }
-        }
-
-        List<Track> matches = new ArrayList<>(found.values());
-
-        // No results found
         if (matches.isEmpty()) {
             showMessage("No songs found");
             return;
         }
 
-        // Display matching songs
         int index = 1;
 
         for (Track track : matches) {
@@ -147,7 +160,26 @@ public class SearchPage extends VBox {
                 createTrackRow(index++, track)
             );
         }
-    }
+    });
+
+    searchTask.setOnFailed(event -> {
+
+        if (requestId != searchRequestId) {
+            return;
+        }
+
+        resultsContainer.getChildren().clear();
+        showMessage("Unable to search Spotify. Please try again.");
+
+        searchTask.getException().printStackTrace();
+    });
+
+    Thread searchThread = new Thread(searchTask);
+    searchThread.setDaemon(true);
+    searchThread.start();
+}
+
+
 
     // Check whether a song or artist matches the search
     private boolean matchesQuery(Track track, String q) {
