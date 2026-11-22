@@ -15,6 +15,9 @@ import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
+import com.shuffly.spotify.SpotifyApiClient;
+import javafx.application.Platform;
+import javafx.scene.control.Alert;
 
 public class PlaylistDetailPage extends VBox {
 
@@ -63,8 +66,25 @@ public class PlaylistDetailPage extends VBox {
         );
         playAllBtn.setOnAction(e -> {
             if (playlist != null && !playlist.getTracks().isEmpty()) {
-            	state.queueManager.loadShuffled(playlist.getTracks(), state.selectedMood);
-                state.isPlaying = true;
+
+                // Exit Station Mode
+                state.stationMode = false;
+                state.selectedStation = null;
+                state.stationPlayer.clear();
+
+                // Load the playlist
+                state.queueManager.loadShuffled(
+                    playlist.getTracks(),
+                    state.selectedMood
+                );
+
+                // Start the first song on Spotify
+                Track firstTrack = state.queueManager.getCurrent();
+
+                if (firstTrack != null) {
+                    state.isPlaying = true;
+                    startSpotifyTrack(firstTrack);
+                }
             }
         });
 
@@ -134,10 +154,56 @@ public class PlaylistDetailPage extends VBox {
         );
 
         row.setOnMouseClicked(e -> {
-            state.queueManager.loadPlaylist(java.util.List.of(track), false);
+
+            // Exit Station Mode
+            state.stationMode = false;
+            state.selectedStation = null;
+            state.stationPlayer.clear();
+
+            // Load the selected song
+            state.queueManager.loadPlaylist(
+                java.util.List.of(track),
+                false
+            );
+
             state.isPlaying = true;
+
+            // Start playback on Spotify
+            startSpotifyTrack(track);
         });
 
         return row;
+    }
+    
+    private void startSpotifyTrack(Track track) {
+
+        if (track == null) {
+            return;
+        }
+
+        new Thread(() -> {
+            try {
+                SpotifyApiClient api = new SpotifyApiClient();
+                String deviceId = api.getActiveDeviceId();
+
+                api.playTracks(
+                    java.util.List.of(track.getId()),
+                    deviceId
+                );
+
+            } catch (Exception ex) {
+                ex.printStackTrace();
+
+                Platform.runLater(() -> {
+                    Alert alert = new Alert(Alert.AlertType.ERROR);
+                    alert.setTitle("Playback Error");
+                    alert.setHeaderText("Couldn't start playback");
+                    alert.setContentText(
+                        "Make sure Spotify is open and an active device is available."
+                    );
+                    alert.showAndWait();
+                });
+            }
+        }).start();
     }
 }

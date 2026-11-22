@@ -14,19 +14,28 @@ import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
-
-import java.util.ArrayList;
+import javafx.scene.control.Dialog;
+import javafx.scene.control.TextField;
+import javafx.scene.control.TextArea;
+import javafx.scene.control.ButtonType;
 import java.util.List;
 import java.util.function.Consumer;
+import com.shuffly.model.Track;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 public class LibraryPage extends VBox {
 
     private final AppState state;
     private final Consumer<Playlist> onPlaylistSelected;
+    private final Consumer<Station> onStationSelected;
 
-    public LibraryPage(AppState state, Consumer<Playlist> onPlaylistSelected) {
+    public LibraryPage(AppState state, Consumer<Playlist> onPlaylistSelected, Consumer<Station> onStationSelected) {
+
         this.state = state;
         this.onPlaylistSelected = onPlaylistSelected;
+        this.onStationSelected = onStationSelected;
 
         setSpacing(35);
         setPadding(new Insets(10, 0, 20, 0));
@@ -76,15 +85,26 @@ public class LibraryPage extends VBox {
         // ===== STATIONS =====
         VBox stationsSection = new VBox(16);
 
+        HBox stationsHeader = new HBox(16);
+        stationsHeader.setAlignment(Pos.CENTER_LEFT);
+
         Label stationsTitle = new Label("Stations");
         stationsTitle.setTextFill(Color.WHITE);
         stationsTitle.setFont(Font.font("System", FontWeight.BOLD, 22));
+
+        Label createStationButton = new Label("+ Create Station");
+        createStationButton.setTextFill(state.accentColor);
+        createStationButton.setFont(Font.font("System", FontWeight.BOLD, 14));
+        createStationButton.setCursor(javafx.scene.Cursor.HAND);
+        createStationButton.setOnMouseClicked(e -> showCreateStationDialog());
+
+        stationsHeader.getChildren().addAll(stationsTitle, createStationButton);
 
         HBox stationCards = new HBox(18);
         stationCards.setAlignment(Pos.CENTER_LEFT);
         stationCards.setPadding(new Insets(0, 0, 10, 0));
 
-        for (Station station : createMockStations()) {
+        for (Station station : state.stations) {
             stationCards.getChildren().add(createStationCard(station));
         }
 
@@ -100,7 +120,7 @@ public class LibraryPage extends VBox {
         stationScroll.getStyleClass().add("library-scroll");
         applyAccentToScrollPane(stationScroll, state.accentColor);
 
-        stationsSection.getChildren().addAll(stationsTitle, stationScroll);
+        stationsSection.getChildren().addAll(stationsHeader, stationScroll);
 
         getChildren().addAll(playlistsSection, stationsSection);
     }
@@ -208,6 +228,7 @@ public class LibraryPage extends VBox {
         info.setMaxWidth(180);
 
         card.getChildren().addAll(cover, name, info);
+        card.setOnMouseClicked(e -> onStationSelected.accept(station));
 
         card.setOnMouseEntered(e -> cover.setStyle(
             "-fx-background-color: #2a2a3d;" +
@@ -223,6 +244,87 @@ public class LibraryPage extends VBox {
         ));
 
         return card;
+    }
+    
+    private void showCreateStationDialog() {
+        Dialog<Station> dialog = new Dialog<>();
+
+        dialog.setTitle("Create Station");
+        dialog.setHeaderText("Create your own listening station");
+
+        TextField nameField = new TextField();
+        nameField.setPromptText("Station name");
+
+        TextArea descriptionField = new TextArea();
+        descriptionField.setPromptText("Describe your station");
+        descriptionField.setPrefRowCount(3);
+
+        VBox content = new VBox(12);
+        content.getChildren().addAll(
+            new Label("Station Name"),
+            nameField,
+            new Label("Description"),
+            descriptionField
+        );
+
+        dialog.getDialogPane().setContent(content);
+
+        ButtonType createButtonType = new ButtonType(
+            "Create",
+            javafx.scene.control.ButtonBar.ButtonData.OK_DONE
+        );
+
+        dialog.getDialogPane().getButtonTypes().addAll(
+            createButtonType,
+            ButtonType.CANCEL
+        );
+
+        dialog.setResultConverter(button -> {
+            if (button == createButtonType) {
+                String name = nameField.getText().trim();
+                String description = descriptionField.getText().trim();
+
+                if (!name.isEmpty()) {
+                    return new Station(
+                        java.util.UUID.randomUUID().toString(),
+                        name,
+                        description,
+                        null
+                    );
+                }
+            }
+
+            return null;
+        });
+
+        dialog.showAndWait().ifPresent(station -> {
+            state.stations.add(station);
+            rebuildLibraryContent();
+        });
+    }
+        
+    private List<Track> getStationLibraryTracks() {
+
+        Map<String, Track> uniqueTracks = new LinkedHashMap<>();
+
+        // Include Liked Songs
+        for (Track track : state.likedSongs) {
+            if (track != null && track.getId() != null) {
+                uniqueTracks.putIfAbsent(track.getId(), track);
+            }
+        }
+
+        // Include tracks from all loaded playlists
+        for (Playlist playlist : state.playlists) {
+
+            for (Track track : playlist.getTracks()) {
+                if (track != null && track.getId() != null) {
+                    uniqueTracks.putIfAbsent(track.getId(), track);
+                }
+            }
+        }
+
+        return new ArrayList<>(uniqueTracks.values());
     }
 
     private void applyAccentToScrollPane(ScrollPane scroll, Color accent) {
@@ -263,14 +365,5 @@ public class LibraryPage extends VBox {
                 "-fx-background-radius: 4px;"
             );
         }
-    }
-
-    private List<Station> createMockStations() {
-        List<Station> list = new ArrayList<>();
-        list.add(new Station("s1", "Mood: Chill", "Based on your calm listening", null));
-        list.add(new Station("s2", "Artist Radio", "Similar to your top artists", null));
-        list.add(new Station("s3", "Discovery", "New music you might like", null));
-        list.add(new Station("s4", "Energy Boost", "High energy tracks", null));
-        return list;
     }
 }
