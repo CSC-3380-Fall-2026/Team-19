@@ -60,16 +60,41 @@ public class QueuePage extends VBox {
     }
 
     private String buildSignature() {
+
+        StringBuilder sb = new StringBuilder();
+
+        sb.append(state.stationMode).append("|");
+
+        if (state.stationMode) {
+
+            sb.append(state.selectedStation == null
+                    ? "none"
+                    : state.selectedStation.getId());
+
+            sb.append("|");
+
+            Track current = state.stationPlayer.getCurrentTrack();
+
+            sb.append(current == null
+                    ? "none"
+                    : current.getId() + current.getMoodTags());
+
+            sb.append("|").append(state.isPlaying);
+
+            return sb.toString();
+        }
+
         Track current = state.queueManager.getCurrent();
         List<Track> upNext = state.queueManager.getUpNext();
         List<Track> history = state.queueManager.getHistory();
 
-        StringBuilder sb = new StringBuilder();
         sb.append(current == null
                 ? "none"
                 : current.getId() + current.getMoodTags())
           .append("|");
+
         sb.append(state.isPlaying).append("|");
+
         for (Track t : upNext) {
             sb.append(t.getId())
               .append(t.getMoodTags())
@@ -83,11 +108,52 @@ public class QueuePage extends VBox {
               .append(t.getMoodTags())
               .append(",");
         }
+
         return sb.toString();
     }
 
     private void rebuild() {
         content.getChildren().clear();
+        
+        // Station Mode: show only the station and current song.
+        if (state.stationMode) {
+
+            Label stationTitle = new Label("Now Playing: " +
+                    (state.selectedStation == null
+                            ? "Station"
+                            : state.selectedStation.getName()));
+
+            stationTitle.setTextFill(Color.WHITE);
+            stationTitle.setFont(Font.font("System", FontWeight.BOLD, 22));
+
+            VBox nowSection = new VBox(8);
+
+            Track current = state.stationPlayer.getCurrentTrack();
+
+            if (current != null) {
+                nowSection.getChildren().add(
+                        createTrackRow(current, "▶", true, false)
+                );
+            } else {
+                Label empty = new Label("Nothing playing");
+                empty.setTextFill(Color.web("#b3b3b3"));
+                nowSection.getChildren().add(empty);
+            }
+
+            Label description = new Label(
+                    "Your station plays randomized songs matching its description."
+            );
+            description.setTextFill(Color.web("#b3b3b3"));
+            description.setWrapText(true);
+
+            content.getChildren().addAll(
+                    stationTitle,
+                    nowSection,
+                    description
+            );
+
+            return;
+        }
 
         // ===== NOW PLAYING =====
         Label nowTitle = new Label("Now Playing");

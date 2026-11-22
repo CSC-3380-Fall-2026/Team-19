@@ -3,6 +3,9 @@ package com.shuffly;
 import com.shuffly.model.Track;
 import com.shuffly.model.Playlist;
 import javafx.scene.paint.Color;
+import com.shuffly.model.Station;
+import com.shuffly.model.Station;
+import com.shuffly.shuffle.StationPlayer;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -20,5 +23,11 @@ public class AppState {
     
     public List<Playlist> playlists = new ArrayList<>();
     public List<Track> likedSongs = new ArrayList<>();
+    
+    public List<Station> stations = new ArrayList<>();
+    public Station selectedStation = null;
+    public StationPlayer stationPlayer = new StationPlayer();
+    public boolean stationMode = false;
+    
 }
 

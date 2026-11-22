@@ -36,26 +36,42 @@ public class MainLayout extends BorderPane {
             	    new com.shuffly.ui.pages.SearchPage(state)
             	);
             case "Library" -> contentArea.getChildren().add(
-                new LibraryPage(state, playlist -> {
-                    // playlist clicked
-                    state.selectedPlaylist = playlist;
-                    showPage("PlaylistDetail");
-                })
-            );
+            	    new LibraryPage(
+            	        state,
+            	        playlist -> {
+            	            state.selectedPlaylist = playlist;
+            	            showPage("PlaylistDetail");
+            	        },
+            	        station -> {
+            	            state.selectedStation = station;
+            	            showPage("StationDetail");
+            	        }
+            	    )
+            	);
             case "PlaylistDetail" -> contentArea.getChildren().add(
-                new PlaylistDetailPage(state, () -> {
-                    showPage("Library");
-                    sidebar.select("Library");
-                })
+	                new PlaylistDetailPage(state, () -> {
+	                    showPage("Library");
+	                    sidebar.select("Library");
+	                })
+            );
+            case "StationDetail" -> contentArea.getChildren().add(
+            	    new StationDetailPage(
+            	        state,
+            	        () -> {
+            	            showPage("Library");
+            	            sidebar.select("Library");
+            	        },
+            	        playerBar::refresh
+            	    )
             );
             case "Queue" -> {
-                contentArea.getChildren().add(new QueuePage(state, playerBar::refresh));
+                	contentArea.getChildren().add(new QueuePage(state, playerBar::refresh));
             }
             case "Shuffle Mode" -> contentArea.getChildren().add(
-                new ShuffleModePage(state, playerBar::refresh)
+            		new ShuffleModePage(state, playerBar::refresh)
             );
             case "Settings" -> contentArea.getChildren().add(
-                new SettingsPage(state, playerBar::refresh)
+            		new SettingsPage(state, playerBar::refresh)
             );
         }
 
