@@ -4,92 +4,111 @@ package com.shuffly.shuffle;
 import com.shuffly.model.Track;
 
 import java.util.ArrayList;
-import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Locale;
-import java.util.Set;
+import java.util.HashMap;
+import java.util.Map;
 
 public class MoodTagger {
+	
+	private static final Map<String, Map<String, Integer>> MOOD_KEYWORDS =
+	        new HashMap<>();
+	static {
+	    addMood("happy", 3,
+	            "happy", "smile", "sunshine", "joy", "beautiful",
+	            "wonderful", "bright", "paradise", "celebrate",
+	            "summer", "bliss", "freedom", "fun");
 
-    public static void assignTags(Track track) {
+	    addMood("chill", 3,
+	            "relax", "calm", "peace", "dream", "sleep",
+	            "quiet", "rain", "moonlight", "breeze",
+	            "floating", "ambient", "mellow", "slow");
 
-        if (track == null || track.areMoodTagsCustomized()) {
-            return;
-        }
+	    addMood("sad", 3,
+	            "heartbreak", "tears", "lonely", "goodbye",
+	            "broken", "miss you", "without you", "grief",
+	            "empty", "regret", "lost", "farewell");
 
-        String title = normalize(track.getName());
+	    addMood("energetic", 3,
+	            "fire", "power", "fight", "run", "alive",
+	            "strong", "energy", "rise", "wild",
+	            "rush", "adrenaline", "intense", "unstoppable");
 
-        Set<String> tags = new LinkedHashSet<>();
+	    addMood("focus", 3,
+	            "instrumental", "concentration", "study",
+	            "piano", "ambient", "meditation", "deep work",
+	            "minimal", "classical", "background");
 
-        // Happy
-        if (containsAny(title,
-                "happy", "smile", "sunshine", "good day",
-                "good time", "beautiful", "joy")) {
-            tags.add("happy");
-        }
+	    addMood("party", 3,
+	            "party", "dance", "club", "tonight",
+	            "celebration", "disco", "remix", "celebrate",
+	            "turn up", "dancefloor");
 
-        // Chill
-        if (containsAny(title,
-                "calm", "sleep", "dream", "slow",
-                "relax", "rain", "peace", "quiet")) {
-            tags.add("chill");
-        }
+	    addMood("romantic", 3,
+	            "love", "baby", "kiss", "forever",
+	            "romance", "lover", "darling", "heart",
+	            "sweetheart", "together", "crush");
 
-        // Sad
-        if (containsAny(title,
-                "sad", "alone", "goodbye", "tears",
-                "miss you", "broken", "hurt",
-                "without you", "suffocating", "gone")) {
-            tags.add("sad");
-        }
+	    addMood("angry", 3,
+	            "rage", "angry", "hate", "war",
+	            "destroy", "revenge", "betrayed", "fury",
+	            "violence", "fight", "furious");
+	}
+	
+	private static void addMood(String mood, int weight, String... keywords) {
+	    Map<String, Integer> keywordsWithWeights = new HashMap<>();
 
-        // Energetic
-        if (containsAny(title,
-                "run", "fire", "fight", "alive",
-                "power", "strong", "energy", "rise")) {
-            tags.add("energetic");
-        }
+	    for (String keyword : keywords) {
+	        keywordsWithWeights.put(keyword, weight);
+	    }
 
-        // Focus
-        if (containsAny(title,
-                "study", "focus", "instrumental",
-                "piano", "concentration")) {
-            tags.add("focus");
-        }
+	    MOOD_KEYWORDS.put(mood, keywordsWithWeights);
+	}
 
-        // Party
-        if (containsAny(title,
-                "party", "dance", "tonight",
-                "club", "celebrate")) {
-            tags.add("party");
-        }
+	public static void assignTags(Track track) {
 
-        // Romantic
-        if (containsAny(title,
-                "love", "baby", "kiss", "forever",
-                "romance", "lover", "darling")) {
-            tags.add("romantic");
-        }
+	    if (track == null || track.areMoodTagsCustomized()) {
+	        return;
+	    }
 
-        // Angry
-        if (containsAny(title,
-                "rage", "angry", "hate", "war",
-                "destroy", "betrayed", "revenge")) {
-            tags.add("angry");
-        }
+	    String title = normalize(track.getName());
 
-        track.setMoodTags(new ArrayList<>(tags));
-    }
+	    Map<String, Integer> scores = new HashMap<>();
 
-    private static boolean containsAny(String text, String... keywords) {
+	    // Calculate a score for every mood.
+	    for (String mood : MOOD_KEYWORDS.keySet()) {
 
-        for (String keyword : keywords) {
-            if (text.contains(keyword)) {
-                return true;
-            }
-        }
+	        int score = 0;
 
-        return false;
-    }
+	        Map<String, Integer> keywords = MOOD_KEYWORDS.get(mood);
+
+	        for (Map.Entry<String, Integer> entry : keywords.entrySet()) {
+
+	            if (containsPhrase(title, entry.getKey())) {
+	                score += entry.getValue();
+	            }
+	        }
+
+	        scores.put(mood, score);
+	    }
+
+	    // Assign moods that reach the minimum score.
+	    List<String> tags = new ArrayList<>();
+
+	    for (Map.Entry<String, Integer> entry : scores.entrySet()) {
+
+	        if (entry.getValue() >= 3) {
+	            tags.add(entry.getKey());
+	        }
+	    }
+
+	    track.setMoodTags(tags);
+	}
+	
+	private static boolean containsPhrase(String text, String phrase) {
+
+	    return (" " + text + " ").contains(" " + phrase + " ");
+	}
 
     private static String normalize(String text) {
 

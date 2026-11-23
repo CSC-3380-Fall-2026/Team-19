@@ -55,7 +55,6 @@ public class HomePage extends VBox {
                             
                             //Load real playlists + liked songs
                             state.spotifyService.loadUserLibrary(state);
-                            service.loadUserLibrary(state);
 
                             javafx.application.Platform.runLater(() -> {
                                 state.spotifyConnected = true;

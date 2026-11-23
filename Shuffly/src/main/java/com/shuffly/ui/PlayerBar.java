@@ -420,6 +420,42 @@ public class PlayerBar extends HBox {
 
                     JSONObject item = playing.optJSONObject("item");
                     if (item != null) {
+                    	String trackId = item.optString("id", "");
+
+                    	if (!state.stationMode && !trackId.isBlank()) {
+                    	    Track spotifyTrack = state.findTrackById(trackId);
+
+                    	    if (spotifyTrack == null) {
+                    	        String spotifyName = item.optString("name", "Unknown");
+                    	        String spotifyArtist = "Unknown";
+                    	        String albumArtUrl = "";
+
+                    	        JSONArray artists = item.optJSONArray("artists");
+                    	        if (artists != null && artists.length() > 0) {
+                    	            spotifyArtist = artists.getJSONObject(0)
+                    	                .optString("name", "Unknown");
+                    	        }
+
+                    	        JSONObject album = item.optJSONObject("album");
+                    	        if (album != null) {
+                    	            JSONArray images = album.optJSONArray("images");
+                    	            if (images != null && images.length() > 0) {
+                    	                albumArtUrl = images.getJSONObject(0)
+                    	                    .optString("url", "");
+                    	            }
+                    	        }
+
+                    	        spotifyTrack = new Track(
+                    	            trackId,
+                    	            spotifyName,
+                    	            spotifyArtist,
+                    	            albumArtUrl,
+                    	            (int) item.optLong("duration_ms", 0)
+                    	        );
+                    	    }
+
+                    	    state.queueManager.setCurrent(spotifyTrack);
+                    	}
                         long durationMs = item.optLong("duration_ms", 1);
                         String name = item.optString("name", "Unknown");
                         // Automatically advance when a song is nearly finished.

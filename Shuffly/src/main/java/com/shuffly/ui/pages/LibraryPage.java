@@ -20,10 +20,6 @@ import javafx.scene.control.TextArea;
 import javafx.scene.control.ButtonType;
 import java.util.List;
 import java.util.function.Consumer;
-import com.shuffly.model.Track;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.Map;
 
 public class LibraryPage extends VBox {
 
@@ -179,11 +175,7 @@ public class LibraryPage extends VBox {
                     }
 
                     Platform.runLater(() -> {
-                        if (!playlist.getTracks().isEmpty()) {
-                        	state.queueManager.loadShuffled(playlist.getTracks(), state.selectedMood);
-                            state.isPlaying = true;
-                        }
-                        state.selectedPlaylist = playlist;
+                    	state.selectedPlaylist = playlist;
 
                         if (onPlaylistSelected != null) {
                             onPlaylistSelected.accept(playlist);
@@ -303,30 +295,6 @@ public class LibraryPage extends VBox {
         });
     }
         
-    private List<Track> getStationLibraryTracks() {
-
-        Map<String, Track> uniqueTracks = new LinkedHashMap<>();
-
-        // Include Liked Songs
-        for (Track track : state.likedSongs) {
-            if (track != null && track.getId() != null) {
-                uniqueTracks.putIfAbsent(track.getId(), track);
-            }
-        }
-
-        // Include tracks from all loaded playlists
-        for (Playlist playlist : state.playlists) {
-
-            for (Track track : playlist.getTracks()) {
-                if (track != null && track.getId() != null) {
-                    uniqueTracks.putIfAbsent(track.getId(), track);
-                }
-            }
-        }
-
-        return new ArrayList<>(uniqueTracks.values());
-    }
-
     private void applyAccentToScrollPane(ScrollPane scroll, Color accent) {
         String hex = String.format("#%02X%02X%02X",
             (int) (accent.getRed() * 255),

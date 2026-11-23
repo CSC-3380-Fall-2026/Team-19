@@ -133,12 +133,6 @@ public class SpotifyService {
 	
 	    for (Track track : tracks) {
 	        MoodTagger.assignTags(track);
-	
-	        System.out.println(
-	            track.getName()
-	            + " | Artist: " + track.getArtist()
-	            + " | Mood tags: " + track.getMoodTags()
-	        );
 	    }
 	}
 

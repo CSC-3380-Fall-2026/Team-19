@@ -2,8 +2,10 @@
 package com.shuffly.ui.pages;
 
 import com.shuffly.AppState;
-import com.shuffly.model.Playlist;
 import com.shuffly.model.Track;
+import com.shuffly.spotify.SpotifyApiClient;
+import javafx.application.Platform;
+import javafx.scene.control.Alert;
 
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -18,15 +20,11 @@ import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
-import javafx.application.Platform;
 import javafx.concurrent.Task;
 import javafx.animation.PauseTransition;
 import javafx.util.Duration;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 public class SearchPage extends VBox {
 
@@ -89,22 +87,31 @@ public class SearchPage extends VBox {
 
         VBox.setVgrow(scroll, Priority.ALWAYS);
 
-       // Live search with a short delay to avoid excessive API requests
+        // Live search with a short delay
         PauseTransition searchDelay = new PauseTransition(
-        Duration.millis(350));
-
-        searchField.textProperty().addListener((obs, oldVal, newVal) -> {
-        searchRequestId++;
-
-        searchDelay.setOnFinished(e ->
-        updateResults(searchField.getText())
+            Duration.millis(350)
         );
 
-     searchDelay.playFromStart();
-    });
+        searchField.textProperty().addListener((obs, oldVal, newVal) -> {
+            int requestId = ++searchRequestId;
+
+            searchDelay.stop();
+            resultsContainer.getChildren().clear();
+
+            if (newVal == null || newVal.isBlank()) {
+                showMessage("Start typing to search Spotify");
+                return;
+            }
+
+            searchDelay.setOnFinished(e ->
+                updateResults(newVal, requestId)
+            );
+
+            searchDelay.playFromStart();
+        });
 
         // Initial empty state
-        showMessage("Start typing to search your library");
+        showMessage("Start typing to search Spotify");
 
         // Add elements to page
         getChildren().addAll(
@@ -113,78 +120,64 @@ public class SearchPage extends VBox {
             resultsTitle,
             scroll
         );
-    }
+	}
 
     // Search through liked songs and playlists
     // Search Spotify's catalog in the background
-    private void updateResults(String query) {
+    private void updateResults(String query, int requestId) {
+        resultsContainer.getChildren().clear();
 
-     resultsContainer.getChildren().clear();
-
-     if (query == null || query.isBlank()) {
-        showMessage("Start typing to search Spotify");
-        return;
+        if (query == null || query.isBlank()) {
+            showMessage("Start typing to search Spotify");
+            return;
         }
 
-        int requestId = searchRequestId;
-
-     showMessage("Searching Spotify...");
+        showMessage("Searching Spotify...");
 
         Task<List<Track>> searchTask = new Task<>() {
             @Override
-         protected List<Track> call() throws Exception {
-            return state.spotifyService.searchTracks(query.trim());
-        }
-    };
+            protected List<Track> call() throws Exception {
+                return state.spotifyService.searchTracks(query.trim());
+            }
+        };
 
-     searchTask.setOnSucceeded(event -> {
+        searchTask.setOnSucceeded(event -> {
+            if (requestId != searchRequestId) {
+                return;
+            }
 
-        // Ignore outdated search results
-        if (requestId != searchRequestId) {
-            return;
-        }
+            resultsContainer.getChildren().clear();
 
-        resultsContainer.getChildren().clear();
+            List<Track> matches = searchTask.getValue();
 
-        List<Track> matches = searchTask.getValue();
+            if (matches.isEmpty()) {
+                showMessage("No songs found");
+                return;
+            }
 
-        if (matches.isEmpty()) {
-            showMessage("No songs found");
-            return;
-        }
+            int index = 1;
 
-        int index = 1;
+            for (Track track : matches) {
+                resultsContainer.getChildren().add(
+                    createTrackRow(index++, track)
+                );
+            }
+        });
 
-        for (Track track : matches) {
-            resultsContainer.getChildren().add(
-                createTrackRow(index++, track)
-            );
-        }
-    });
+        searchTask.setOnFailed(event -> {
+            if (requestId != searchRequestId) {
+                return;
+            }
 
-    searchTask.setOnFailed(event -> {
+            resultsContainer.getChildren().clear();
+            showMessage("Unable to search Spotify. Please try again.");
 
-        if (requestId != searchRequestId) {
-            return;
-        }
+            searchTask.getException().printStackTrace();
+        });
 
-        resultsContainer.getChildren().clear();
-        showMessage("Unable to search Spotify. Please try again.");
-
-        searchTask.getException().printStackTrace();
-    });
-
-    Thread searchThread = new Thread(searchTask);
-    searchThread.setDaemon(true);
-    searchThread.start();
-}
-
-
-
-    // Check whether a song or artist matches the search
-    private boolean matchesQuery(Track track, String q) {
-        return track.getName().toLowerCase().contains(q)
-            || track.getArtist().toLowerCase().contains(q);
+        Thread searchThread = new Thread(searchTask);
+        searchThread.setDaemon(true);
+        searchThread.start();
     }
 
     // Display messages inside results container
@@ -248,11 +241,22 @@ public class SearchPage extends VBox {
 
         // Play functionality
         Runnable playTrack = () -> {
+
+            // Exit Station Mode
+            state.stationMode = false;
+            state.selectedStation = null;
+            state.stationPlayer.clear();
+
+            // Load the selected song
             state.queueManager.loadPlaylist(
-                java.util.List.of(track), false
+                java.util.List.of(track),
+                false
             );
 
             state.isPlaying = true;
+
+            // Start playback on Spotify
+            startSpotifyTrack(track);
 
             if (onPlayed != null) {
                 onPlayed.run();
@@ -283,5 +287,37 @@ public class SearchPage extends VBox {
         });
 
         return row;
+    }
+    
+    private void startSpotifyTrack(Track track) {
+
+        if (track == null) {
+            return;
+        }
+
+        new Thread(() -> {
+            try {
+                SpotifyApiClient api = new SpotifyApiClient();
+                String deviceId = api.getActiveDeviceId();
+
+                api.playTracks(
+                    java.util.List.of(track.getId()),
+                    deviceId
+                );
+
+            } catch (Exception ex) {
+                ex.printStackTrace();
+
+                Platform.runLater(() -> {
+                    Alert alert = new Alert(Alert.AlertType.ERROR);
+                    alert.setTitle("Playback Error");
+                    alert.setHeaderText("Couldn't start playback");
+                    alert.setContentText(
+                        "Make sure Spotify is open and an active device is available."
+                    );
+                    alert.showAndWait();
+                });
+            }
+        }).start();
     }
 }

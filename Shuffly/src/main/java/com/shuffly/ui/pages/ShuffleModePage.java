@@ -49,7 +49,9 @@ public class ShuffleModePage extends VBox {
                 "-fx-background-radius: 8px; -fx-cursor: hand;";
 
             // Highlight current mode
-            boolean selected = shuffleMode.getLabel().equals(state.currentShuffleMode);
+            boolean selected = shuffleMode == ShuffleMode.MOOD_BASED
+            	    ? state.currentShuffleMode.startsWith("Mood-based")
+            	    : shuffleMode.getLabel().equals(state.currentShuffleMode);
             modeBtn.setStyle(selected
                 ? "-fx-background-color: #1db954; -fx-text-fill: black; -fx-font-size: 15px; -fx-padding: 14 18; -fx-background-radius: 8px; -fx-cursor: hand;"
                 : baseStyle);
@@ -60,6 +62,22 @@ public class ShuffleModePage extends VBox {
                 } else {
                     state.currentShuffleMode = shuffleMode.getLabel();
                     state.queueManager.setShuffleMode(shuffleMode);
+
+                    // Reorder upcoming songs using the newly selected shuffle mode.
+                    if (state.selectedPlaylist != null) {
+                        if (state.queueManager.getCurrent() != null) {
+                            state.queueManager.reshuffleUpcoming(
+                                state.selectedPlaylist.getTracks(),
+                                state.selectedMood
+                            );
+                        } else {
+                            state.queueManager.loadShuffled(
+                                state.selectedPlaylist.getTracks(),
+                                state.selectedMood
+                            );
+                        }
+                    }
+
                     if (onModeChanged != null) onModeChanged.run();
 
                     // rebuild to update selected styles
@@ -153,16 +171,26 @@ public class ShuffleModePage extends VBox {
 
         state.queueManager.setShuffleMode(ShuffleMode.MOOD_BASED);
 
-        // Rebuild the queue using the selected mood
+     // Reorder upcoming songs without interrupting the current song.
         if (state.selectedPlaylist != null) {
-            state.queueManager.loadShuffled(
-                state.selectedPlaylist.getTracks(),
-                mood
-            );
+            if (state.queueManager.getCurrent() != null) {
+                state.queueManager.reshuffleUpcoming(
+                    state.selectedPlaylist.getTracks(),
+                    mood
+                );
+            } else {
+                state.queueManager.loadShuffled(
+                    state.selectedPlaylist.getTracks(),
+                    mood
+                );
+            }
         }
 
         if (onModeChanged != null) {
             onModeChanged.run();
         }
+        getChildren().setAll(
+        	    new ShuffleModePage(state, onModeChanged).getChildren()
+        	);
     }
 }

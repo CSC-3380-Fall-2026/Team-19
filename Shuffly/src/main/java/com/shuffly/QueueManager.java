@@ -1,5 +1,4 @@
 package com.shuffly;
-// Jakobe Humphrey
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -69,6 +68,34 @@ public class QueueManager<T> {
 
     public void clear()                       { upNext.clear(); }
     public T getCurrent()                     { return current; }
+    public void setCurrent(T track) {
+        if (track == null) {
+            return;
+        }
+
+        // Don't update anything if this is already the current song.
+        if (current instanceof Track && track instanceof Track
+                && ((Track) current).getId().equals(((Track) track).getId())) {
+            return;
+        }
+
+        // Move the previous song into history.
+        if (current != null) {
+            history.add(current);
+        }
+
+        // Remove the new current song from Up Next, if it's there.
+        if (track instanceof Track) {
+            String trackId = ((Track) track).getId();
+
+            upNext.removeIf(item ->
+                item instanceof Track
+                    && ((Track) item).getId().equals(trackId)
+            );
+        }
+
+        current = track;
+    }
     public List<T> getUpNext()                { return Collections.unmodifiableList(upNext); }
     public List<T> getHistory()               { return Collections.unmodifiableList(history); }
     
@@ -89,5 +116,38 @@ public class QueueManager<T> {
 
         List<Track> ordered = strategy.shuffle(songs, recent);
         loadPlaylist((List<T>) (List<?>) ordered, false);
+    }
+    
+    @SuppressWarnings("unchecked")
+    public void reshuffleUpcoming(List<Track> songs, String mood) {
+        if (songs == null || songs.isEmpty()) {
+            return;
+        }
+
+        List<Track> recent = new ArrayList<>();
+
+        for (T item : history) {
+            if (item instanceof Track) {
+                recent.add((Track) item);
+            }
+        }
+
+        List<Track> remaining = new ArrayList<>(songs);
+
+        // Don't include the currently playing song in the upcoming queue.
+        if (current instanceof Track) {
+            remaining.removeIf(track ->
+                track.getId().equals(((Track) current).getId())
+            );
+        }
+
+        ShuffleStrategy strategy = (shuffleMode == ShuffleMode.MOOD_BASED)
+            ? new MoodBasedShuffle(mood)
+            : shuffleMode.getStrategy();
+
+        List<Track> ordered = strategy.shuffle(remaining, recent);
+
+        upNext.clear();
+        upNext.addAll((List<T>) (List<?>) ordered);
     }
 }
