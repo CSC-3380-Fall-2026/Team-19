@@ -107,6 +107,27 @@ public class SpotifyService {
         );
     }
 
+    /**
+ * Searches Spotify and converts the results into Track objects.
+ */
+    public List<Track> searchTracks(String query) throws Exception {
+
+    JSONArray results = api.searchTracks(query);
+
+    List<Track> tracks = new ArrayList<>();
+
+    for (int i = 0; i < results.length(); i++) {
+        JSONObject trackJson = results.getJSONObject(i);
+
+        Track track = SpotifyMapper.toTrack(trackJson);
+        tracks.add(track);
+    }
+
+    assignMoodTags(tracks);
+
+    return tracks;
+}
+
 
 	private void assignMoodTags(List<Track> tracks) {
 	

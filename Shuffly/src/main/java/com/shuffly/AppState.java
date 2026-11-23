@@ -6,12 +6,15 @@ import javafx.scene.paint.Color;
 import com.shuffly.model.Station;
 import com.shuffly.model.Station;
 import com.shuffly.shuffle.StationPlayer;
+import com.shuffly.spotify.SpotifyService;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class AppState {
     public final QueueManager<Track> queueManager = new QueueManager<>();
+
+     public final SpotifyService spotifyService = new SpotifyService();
     
     public boolean isPlaying = false;
     public boolean spotifyConnected = false;
@@ -28,6 +31,8 @@ public class AppState {
     public Station selectedStation = null;
     public StationPlayer stationPlayer = new StationPlayer();
     public boolean stationMode = false;
+
+   
     
 }
 

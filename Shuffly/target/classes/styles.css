@@ -1,0 +1,47 @@
+/* Thin Spotify-like horizontal scrollbar */
+.library-scroll {
+    -fx-background-color: transparent;
+    -fx-background: transparent;
+    -fx-padding: 0;
+}
+
+.library-scroll .viewport {
+    -fx-background-color: transparent;
+}
+
+.library-scroll .scroll-bar:horizontal {
+    -fx-background-color: transparent;
+    -fx-pref-height: 10px;
+    -fx-padding: 2 0 0 0;
+}
+
+.library-scroll .scroll-bar:horizontal .track {
+    -fx-background-color: rgba(255, 255, 255, 0.08);
+    -fx-background-radius: 4px;
+    -fx-pref-height: 6px;
+}
+
+.library-scroll .scroll-bar:horizontal .thumb {
+    -fx-background-color: rgba(255, 255, 255, 0.35);
+    -fx-background-radius: 4px;
+    -fx-pref-height: 6px;
+    -fx-background-insets: 0;
+}
+
+.library-scroll .scroll-bar:horizontal .thumb:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.55);
+}
+
+.library-scroll .scroll-bar:horizontal .increment-button,
+.library-scroll .scroll-bar:horizontal .decrement-button {
+    -fx-padding: 0;
+    -fx-pref-width: 0;
+    -fx-pref-height: 0;
+    -fx-background-color: transparent;
+    -fx-shape: null;
+}
+
+.library-scroll .scroll-bar:vertical {
+    -fx-pref-width: 0;
+    -fx-opacity: 0;
+}
