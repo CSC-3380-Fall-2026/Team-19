@@ -1,4 +1,3 @@
-
 package com.shuffly.ui.pages;
 
 import com.shuffly.AppState;
@@ -26,7 +25,6 @@ import java.util.Map;
 public class StationDetailPage extends VBox {
 
     private final AppState state;
-    private final Runnable onBack;
     private final Runnable onPlaybackStarted;
 
     public StationDetailPage(
@@ -35,7 +33,6 @@ public class StationDetailPage extends VBox {
             Runnable onPlaybackStarted) {
 
         this.state = state;
-        this.onBack = onBack;
         this.onPlaybackStarted = onPlaybackStarted;
 
         setSpacing(22);
