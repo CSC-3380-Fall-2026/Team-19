@@ -129,6 +129,65 @@ public class SpotifyApiClient {
         return allItems;
     }
 
+    /**
+     * Loads every page from a paginated Spotify endpoint.
+     * Spotify provides the URL for the next page in the "next" field.
+     */
+    private JSONArray getAllPages(
+            String initialPath,
+            String operationName,
+            boolean allowForbidden) throws Exception {
+
+        JSONArray allItems = new JSONArray();
+        String nextUrl = SpotifyConfig.API_BASE + initialPath;
+
+        while (nextUrl != null && !nextUrl.isBlank()) {
+
+            HttpRequest request = authedRequestUrl(nextUrl)
+                .GET()
+                .build();
+
+            HttpResponse<String> response =
+                client.send(request, HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() == 403 && allowForbidden) {
+                System.err.println(
+                    operationName + " forbidden: " + nextUrl
+                );
+                return allItems;
+            }
+
+            if (response.statusCode() != 200) {
+                System.err.println(
+                    operationName + " failed: "
+                        + response.statusCode() + " "
+                        + response.body()
+                );
+                return allItems;
+            }
+
+            JSONObject page = new JSONObject(response.body());
+
+            JSONArray items = page.optJSONArray("items");
+
+            if (items != null) {
+                for (int i = 0; i < items.length(); i++) {
+                    allItems.put(items.get(i));
+                }
+            }
+
+            Object next = page.opt("next");
+
+            if (next == null || next == JSONObject.NULL) {
+                nextUrl = null;
+            } else {
+                nextUrl = next.toString();
+            }
+        }
+
+        return allItems;
+    }
+
     /** Returns the current user's display name, or null on failure. */
     public String getCurrentUserName() throws Exception {
 

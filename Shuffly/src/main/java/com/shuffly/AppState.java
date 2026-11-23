@@ -30,6 +30,8 @@ public class AppState {
     public Station selectedStation = null;
     public StationPlayer stationPlayer = new StationPlayer();
     public boolean stationMode = false;
+
+   
     
     public Track findTrackById(String trackId) {
         if (trackId == null || trackId.isBlank()) {
