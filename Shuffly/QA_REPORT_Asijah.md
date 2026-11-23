@@ -58,4 +58,13 @@ Full playback control and actual shuffle algorithm behavior remain unverified.
 - Retest Queue synchronization after authentication fixes.
 - Test empty, single-song, and duplicate-heavy playlists.
 - Retest playback controls with a supported Spotify Premium account, if available.
-- Record final results and share them with the development team.
+- Record final results and share them with the development team. ## November 22 — Authentication Retest
+
+- Installed Fenista's updated SpotifyApiClient.java and SpotifyAuth.java.
+- Maven compilation: PASS.
+- Application startup: PASS.
+- All six Liked Songs loaded successfully.
+- No HTTP 401 errors observed in the initial test.
+- Automatic token refresh: Not yet verified after token expiry.
+- Queue synchronization bug reproduced: Spotify and the bottom player showed CN TOWER by PARTYNEXTDOOR, while Queue → Now Playing showed TP by Rod Wave.
+- GitHub push remains blocked by HTTP 403 repository permission error.
