@@ -2,6 +2,7 @@
 package com.shuffly.spotify;
 
 import com.shuffly.AppState;
+import com.shuffly.LibraryStorage;
 import com.shuffly.model.Playlist;
 import com.shuffly.model.Track;
 import com.shuffly.shuffle.MoodTagger;
@@ -21,8 +22,7 @@ public class SpotifyService {
         // Load Liked Songs
         JSONArray likedJson = api.getLikedSongs();
 
-        state.likedSongs =
-                SpotifyMapper.toTrackListFromSaved(likedJson);
+        state.likedSongs = SpotifyMapper.toTrackListFromSaved(likedJson);
 
         assignMoodTags(state.likedSongs);
 
@@ -76,6 +76,12 @@ public class SpotifyService {
                 likedPlaylist.getTracks(),
                 state.selectedMood
         );
+        try {
+            LibraryStorage.save(state);
+        } catch (Exception e) {
+            System.err.println("Could not save Spotify library:");
+            e.printStackTrace();
+        }
     }
 
     public void loadPlaylistTracks(Playlist playlist) throws Exception {
