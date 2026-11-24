@@ -1,3 +1,4 @@
+
 package com.shuffly.spotify;
 
 import org.json.JSONArray;
@@ -8,19 +9,124 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.List;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
 public class SpotifyApiClient {
 
     private final HttpClient client = HttpClient.newHttpClient();
 
-    private HttpRequest.Builder authedRequest(String path) {
-        return authedRequestUrl(SpotifyConfig.API_BASE + path);
+    /**
+     * Sends an authenticated Spotify request.
+     * If Spotify returns 401, refreshes the token and retries once.
+     */
+    private HttpResponse<String> sendWithAuth(
+            String url,
+            String method,
+            HttpRequest.BodyPublisher body) throws Exception {
+
+        HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(url))
+            .header("Authorization",
+                    "Bearer " + SpotifyAuth.getValidAccessToken())
+            .method(method, body)
+            .build();
+
+        HttpResponse<String> response = client.send(
+            request,
+            HttpResponse.BodyHandlers.ofString()
+        );
+
+        if (response.statusCode() == 401) {
+            System.out.println("Got 401 — refreshing token...");
+
+            if (SpotifyAuth.refreshAccessToken() == null) {
+                return response;
+            }
+
+            request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .header("Authorization",
+                        "Bearer " + SpotifyAuth.getValidAccessToken())
+                .method(method, body)
+                .build();
+
+            response = client.send(
+                request,
+                HttpResponse.BodyHandlers.ofString()
+            );
+        }
+
+        return response;
     }
 
-    private HttpRequest.Builder authedRequestUrl(String url) {
-        return HttpRequest.newBuilder()
-            .uri(URI.create(url))
-            .header("Authorization", "Bearer " + SpotifyAuth.getAccessToken());
+    /**
+     * Simplified GET request using centralized authentication.
+     */
+    private HttpResponse<String> get(String path) throws Exception {
+        return sendWithAuth(
+            SpotifyConfig.API_BASE + path,
+            "GET",
+            HttpRequest.BodyPublishers.noBody()
+        );
+    }
+
+    /**
+     * Loads every page from a paginated Spotify endpoint.
+     * Spotify provides the URL for the next page in the "next" field.
+     */
+    private JSONArray getAllPages(
+            String initialPath,
+            String operationName,
+            boolean allowForbidden) throws Exception {
+
+        JSONArray allItems = new JSONArray();
+        String nextUrl = SpotifyConfig.API_BASE + initialPath;
+
+        while (nextUrl != null && !nextUrl.isBlank()) {
+
+            HttpResponse<String> response = sendWithAuth(
+                nextUrl,
+                "GET",
+                HttpRequest.BodyPublishers.noBody()
+            );
+
+            if (response.statusCode() == 403 && allowForbidden) {
+                System.err.println(
+                    operationName + " forbidden: " + nextUrl
+                );
+                return allItems;
+            }
+
+            if (response.statusCode() != 200) {
+                System.err.println(
+                    operationName + " failed: "
+                        + response.statusCode() + " "
+                        + response.body()
+                );
+                return allItems;
+            }
+
+            JSONObject page = new JSONObject(response.body());
+
+            JSONArray items = page.optJSONArray("items");
+
+            if (items != null) {
+                for (int i = 0; i < items.length(); i++) {
+                    allItems.put(items.get(i));
+                }
+            }
+
+            Object next = page.opt("next");
+
+            if (next == null || next == JSONObject.NULL) {
+                nextUrl = null;
+            } else {
+                nextUrl = next.toString();
+            }
+        }
+
+        return allItems;
     }
 
     /**
@@ -84,9 +190,8 @@ public class SpotifyApiClient {
 
     /** Returns the current user's display name, or null on failure. */
     public String getCurrentUserName() throws Exception {
-        HttpRequest request = authedRequest("/me").GET().build();
-        HttpResponse<String> response =
-            client.send(request, HttpResponse.BodyHandlers.ofString());
+
+        HttpResponse<String> response = get("/me");
 
         if (response.statusCode() != 200) {
             System.err.println(
@@ -138,13 +243,41 @@ public class SpotifyApiClient {
         );
     }
 
+    /**
+     * Searches Spotify's catalog for tracks matching a query.
+     */
+    public JSONArray searchTracks(String query) throws Exception {
+
+        String encodedQuery = URLEncoder.encode(
+            query,
+            StandardCharsets.UTF_8
+        );
+
+        String path = "/search?q=" + encodedQuery
+            + "&type=track&limit=10";
+
+        HttpResponse<String> response = get(path);
+
+        if (response.statusCode() != 200) {
+            System.err.println(
+                "searchTracks failed: "
+                    + response.statusCode() + " "
+                    + response.body()
+            );
+
+            return new JSONArray();
+        }
+
+        JSONObject json = new JSONObject(response.body());
+
+        return json.getJSONObject("tracks").getJSONArray("items");
+    }
+
     /** Get the user's active Spotify devices. */
     public JSONArray getDevices() throws Exception {
-        HttpRequest request =
-            authedRequest("/me/player/devices").GET().build();
 
         HttpResponse<String> response =
-            client.send(request, HttpResponse.BodyHandlers.ofString());
+            get("/me/player/devices");
 
         if (response.statusCode() != 200) {
             System.err.println(
@@ -159,6 +292,7 @@ public class SpotifyApiClient {
 
     /** Pick the first available device id, or null. */
     public String getActiveDeviceId() throws Exception {
+
         JSONArray devices = getDevices();
 
         for (int i = 0; i < devices.length(); i++) {
@@ -197,22 +331,11 @@ public class SpotifyApiClient {
             path += "?device_id=" + deviceId;
         }
 
-        HttpRequest request = HttpRequest.newBuilder()
-            .uri(URI.create(SpotifyConfig.API_BASE + path))
-            .header(
-                "Authorization",
-                "Bearer " + SpotifyAuth.getAccessToken()
-            )
-            .header("Content-Type", "application/json")
-            .PUT(
-                HttpRequest.BodyPublishers.ofString(
-                    body.toString()
-                )
-            )
-            .build();
-
-        HttpResponse<String> response =
-            client.send(request, HttpResponse.BodyHandlers.ofString());
+        HttpResponse<String> response = sendWithAuth(
+            SpotifyConfig.API_BASE + path,
+            "PUT",
+            HttpRequest.BodyPublishers.ofString(body.toString())
+        );
 
         if (response.statusCode() != 204
                 && response.statusCode() != 200) {
@@ -226,90 +349,62 @@ public class SpotifyApiClient {
     }
 
     public void pause(String deviceId) throws Exception {
+
         String path = "/me/player/pause";
 
         if (deviceId != null) {
             path += "?device_id=" + deviceId;
         }
 
-        HttpRequest request = HttpRequest.newBuilder()
-            .uri(URI.create(SpotifyConfig.API_BASE + path))
-            .header(
-                "Authorization",
-                "Bearer " + SpotifyAuth.getAccessToken()
-            )
-            .PUT(HttpRequest.BodyPublishers.noBody())
-            .build();
-
-        client.send(
-            request,
-            HttpResponse.BodyHandlers.ofString()
+        sendWithAuth(
+            SpotifyConfig.API_BASE + path,
+            "PUT",
+            HttpRequest.BodyPublishers.noBody()
         );
     }
 
     public void resume(String deviceId) throws Exception {
+
         String path = "/me/player/play";
 
         if (deviceId != null) {
             path += "?device_id=" + deviceId;
         }
 
-        HttpRequest request = HttpRequest.newBuilder()
-            .uri(URI.create(SpotifyConfig.API_BASE + path))
-            .header(
-                "Authorization",
-                "Bearer " + SpotifyAuth.getAccessToken()
-            )
-            .PUT(HttpRequest.BodyPublishers.noBody())
-            .build();
-
-        client.send(
-            request,
-            HttpResponse.BodyHandlers.ofString()
+        sendWithAuth(
+            SpotifyConfig.API_BASE + path,
+            "PUT",
+            HttpRequest.BodyPublishers.noBody()
         );
     }
 
     public void next(String deviceId) throws Exception {
+
         String path = "/me/player/next";
 
         if (deviceId != null) {
             path += "?device_id=" + deviceId;
         }
 
-        HttpRequest request = HttpRequest.newBuilder()
-            .uri(URI.create(SpotifyConfig.API_BASE + path))
-            .header(
-                "Authorization",
-                "Bearer " + SpotifyAuth.getAccessToken()
-            )
-            .POST(HttpRequest.BodyPublishers.noBody())
-            .build();
-
-        client.send(
-            request,
-            HttpResponse.BodyHandlers.ofString()
+        sendWithAuth(
+            SpotifyConfig.API_BASE + path,
+            "POST",
+            HttpRequest.BodyPublishers.noBody()
         );
     }
 
     public void previous(String deviceId) throws Exception {
+
         String path = "/me/player/previous";
 
         if (deviceId != null) {
             path += "?device_id=" + deviceId;
         }
 
-        HttpRequest request = HttpRequest.newBuilder()
-            .uri(URI.create(SpotifyConfig.API_BASE + path))
-            .header(
-                "Authorization",
-                "Bearer " + SpotifyAuth.getAccessToken()
-            )
-            .POST(HttpRequest.BodyPublishers.noBody())
-            .build();
-
-        client.send(
-            request,
-            HttpResponse.BodyHandlers.ofString()
+        sendWithAuth(
+            SpotifyConfig.API_BASE + path,
+            "POST",
+            HttpRequest.BodyPublishers.noBody()
         );
     }
 
@@ -325,18 +420,10 @@ public class SpotifyApiClient {
             path += "&device_id=" + deviceId;
         }
 
-        HttpRequest request = HttpRequest.newBuilder()
-            .uri(URI.create(SpotifyConfig.API_BASE + path))
-            .header(
-                "Authorization",
-                "Bearer " + SpotifyAuth.getAccessToken()
-            )
-            .PUT(HttpRequest.BodyPublishers.noBody())
-            .build();
-
-        client.send(
-            request,
-            HttpResponse.BodyHandlers.ofString()
+        sendWithAuth(
+            SpotifyConfig.API_BASE + path,
+            "PUT",
+            HttpRequest.BodyPublishers.noBody()
         );
     }
 
@@ -345,13 +432,9 @@ public class SpotifyApiClient {
      * or null if nothing is playing.
      */
     public JSONObject getCurrentlyPlaying() throws Exception {
-        HttpRequest request =
-            authedRequest("/me/player/currently-playing")
-                .GET()
-                .build();
 
         HttpResponse<String> response =
-            client.send(request, HttpResponse.BodyHandlers.ofString());
+            get("/me/player/currently-playing");
 
         if (response.statusCode() == 204
                 || response.body() == null
@@ -363,6 +446,7 @@ public class SpotifyApiClient {
         if (response.statusCode() != 200) {
             System.err.println(
                 "getCurrentlyPlaying failed: "
+                    + response.statusCode() + " "
                     + response.body()
             );
             return null;
