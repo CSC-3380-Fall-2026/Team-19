@@ -84,7 +84,9 @@ public class SpotifyApiClient {
         String nextUrl = SpotifyConfig.API_BASE + initialPath;
 
         while (nextUrl != null && !nextUrl.isBlank()) {
-
+        	System.out.println(
+        		    operationName + " requesting: " + nextUrl
+        		);
             HttpResponse<String> response = sendWithAuth(
                 nextUrl,
                 "GET",
@@ -110,7 +112,11 @@ public class SpotifyApiClient {
             JSONObject page = new JSONObject(response.body());
 
             JSONArray items = page.optJSONArray("items");
-
+            System.out.println(
+            	    operationName + " received "
+            	        + (items == null ? 0 : items.length())
+            	        + " items."
+            	);
             if (items != null) {
                 for (int i = 0; i < items.length(); i++) {
                     allItems.put(items.get(i));

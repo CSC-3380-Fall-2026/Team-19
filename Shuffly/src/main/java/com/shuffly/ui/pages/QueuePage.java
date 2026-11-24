@@ -223,10 +223,11 @@ public class QueuePage extends VBox {
 
 
 	private TrackRow createTrackRow(Track track, String leftLabel, boolean isCurrent, boolean isUpNext) {
-			return new TrackRow(
-		        track,
-		        leftLabel,
-		        isCurrent,
+		return new TrackRow(
+			    state,
+			    track,
+			    leftLabel,
+			    isCurrent,
 		        () -> {
 		            if (!isCurrent) {
 		                // Play this song next, whether it came from

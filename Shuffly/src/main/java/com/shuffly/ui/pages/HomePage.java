@@ -41,6 +41,22 @@ public class HomePage extends VBox {
         connectBtn.setFont(Font.font("System", FontWeight.SEMI_BOLD, 14));
         connectBtn.setCursor(javafx.scene.Cursor.HAND);
 
+        state.spotifyConnected = SpotifyAuth.isLoggedIn();
+
+        if (state.spotifyConnected) {
+            try {
+                state.spotifyUserName = TokenStorage.loadUsername();
+            } catch (Exception e) {
+                System.err.println("Could not load Spotify username:");
+                e.printStackTrace();
+            }
+
+            if (state.spotifyUserName == null
+                    || state.spotifyUserName.isBlank()) {
+                state.spotifyUserName = "Spotify User";
+            }
+        }
+
         updateConnectionUI(statusLabel, connectBtn);
 
         connectBtn.setOnAction(e -> {
@@ -52,6 +68,9 @@ public class HomePage extends VBox {
                         if (token != null) {
                             SpotifyApiClient api = new SpotifyApiClient();
                             String name = api.getCurrentUserName();
+                            if (name != null) {
+                                TokenStorage.saveUsername(name);
+                            }
                             
                             //Load real playlists + liked songs
                             state.spotifyService.loadUserLibrary(state);
