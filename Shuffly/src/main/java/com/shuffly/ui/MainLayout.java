@@ -13,13 +13,20 @@ public class MainLayout extends BorderPane {
     private final VBox contentArea = new VBox();
     private final Sidebar sidebar;
     private final PlayerBar playerBar;
+    private final java.util.Deque<String> backHistory =
+            new java.util.ArrayDeque<>();
+
+    private final java.util.Deque<String> forwardHistory =
+            new java.util.ArrayDeque<>();
+
+    private String currentPage;
 
     public MainLayout() {
     	SpotifyAuth.loadSavedTokens();
         contentArea.setStyle("-fx-background-color: #121212;");
         contentArea.setPadding(new javafx.geometry.Insets(40));
 
-        sidebar = new Sidebar(this::showPage);
+        sidebar = new Sidebar(this::showPage, this::goBack, this::goForward);
         playerBar = new PlayerBar(state);
 
         setLeft(sidebar);
@@ -41,8 +48,55 @@ public class MainLayout extends BorderPane {
         
         showPage("Home");
     }
-
+    
     private void showPage(String pageName) {
+
+        if (pageName == null || pageName.equals(currentPage)) {
+            return;
+        }
+
+        if (currentPage != null) {
+            backHistory.push(currentPage);
+        }
+
+        forwardHistory.clear();
+
+        currentPage = pageName;
+
+        renderPage(pageName);
+        updateNavigationButtons();
+    }
+    
+    private void goBack() {
+        if (backHistory.isEmpty()) {
+            return;
+        }
+
+        forwardHistory.push(currentPage);
+        currentPage = backHistory.pop();
+
+        renderPage(currentPage);
+        updateNavigationButtons();
+    }
+
+    private void goForward() {
+        if (forwardHistory.isEmpty()) {
+            return;
+        }
+
+        backHistory.push(currentPage);
+        currentPage = forwardHistory.pop();
+
+        renderPage(currentPage);
+        updateNavigationButtons();
+    }
+    
+    private void updateNavigationButtons() {
+        sidebar.setBackDisabled(backHistory.isEmpty());
+        sidebar.setForwardDisabled(forwardHistory.isEmpty());
+    }
+
+    private void renderPage(String pageName) {
         contentArea.getChildren().clear();
 
         switch (pageName) {
