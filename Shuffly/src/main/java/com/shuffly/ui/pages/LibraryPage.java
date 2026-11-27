@@ -17,9 +17,11 @@ import javafx.scene.text.FontWeight;
 import javafx.scene.control.Dialog;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextArea;
+import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import java.util.List;
 import java.util.function.Consumer;
+import javafx.scene.control.Alert;
 
 public class LibraryPage extends VBox {
 
@@ -53,8 +55,18 @@ public class LibraryPage extends VBox {
         Label playlistsTitle = new Label("Playlists");
         playlistsTitle.setTextFill(Color.WHITE);
         playlistsTitle.setFont(Font.font("System", FontWeight.BOLD, 22));
-        
-        libraryHeader.getChildren().addAll(playlistsTitle);
+
+        Button refreshButton = new Button("↻ Refresh Library");
+        refreshButton.setStyle(
+            "-fx-background-color: #282828;" +
+            "-fx-text-fill: white;" +
+            "-fx-background-radius: 20px;" +
+            "-fx-font-size: 12px;" +
+            "-fx-cursor: hand;"
+        );
+        refreshButton.setOnAction(e -> refreshLibrary(refreshButton));
+
+        libraryHeader.getChildren().addAll(playlistsTitle, refreshButton);
 
         HBox playlistCards = new HBox(18);
         playlistCards.setAlignment(Pos.CENTER_LEFT);
@@ -119,6 +131,40 @@ public class LibraryPage extends VBox {
         stationsSection.getChildren().addAll(stationsHeader, stationScroll);
 
         getChildren().addAll(playlistsSection, stationsSection);
+    }
+    
+    private void refreshLibrary(Button refreshButton) {
+        refreshButton.setDisable(true);
+        refreshButton.setText("Refreshing...");
+
+        Thread refreshThread = new Thread(() -> {
+            try {
+                new SpotifyService().refreshUserLibrary(state);
+
+                Platform.runLater(() -> {
+                    rebuildLibraryContent();
+                });
+
+            } catch (Exception ex) {
+                ex.printStackTrace();
+
+                Platform.runLater(() -> {
+                    refreshButton.setDisable(false);
+                    refreshButton.setText("↻ Refresh Library");
+
+                    Alert alert = new Alert(Alert.AlertType.ERROR);
+                    alert.setTitle("Library Refresh Failed");
+                    alert.setHeaderText("Could not refresh your Spotify library.");
+                    alert.setContentText(
+                        "Please check your Spotify connection and try again."
+                    );
+                    alert.showAndWait();
+                });
+            }
+        });
+
+        refreshThread.setDaemon(true);
+        refreshThread.start();
     }
 
     private VBox createPlaylistCard(Playlist playlist) {

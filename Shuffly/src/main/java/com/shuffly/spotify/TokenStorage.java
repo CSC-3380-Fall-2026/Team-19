@@ -15,20 +15,21 @@ public class TokenStorage {
     private static final Path TOKEN_FILE =
             DIRECTORY.resolve("tokens.json");
 
-    public static void save(String accessToken, String refreshToken,
-                            long expirationTime) throws IOException {
+    public static void save(String accessToken, String refreshToken, long expirationTime)
+            throws IOException {
 
-        Files.createDirectories(DIRECTORY);
+        JSONObject json = load();
 
-        JSONObject json = new JSONObject();
+        if (json == null) {
+            json = new JSONObject();
+        }
 
         json.put("accessToken", accessToken);
         json.put("refreshToken", refreshToken);
         json.put("expirationTime", expirationTime);
 
+        Files.createDirectories(DIRECTORY);
         Files.writeString(TOKEN_FILE, json.toString(2));
-
-        System.out.println("Spotify authentication saved.");
     }
 
     public static JSONObject load() throws IOException {

@@ -30,7 +30,6 @@ public class TrackRow extends VBox {
     );
 
     private final Track track;
-    private final AppState state;
     private final List<CheckBox> moodCheckboxes = new ArrayList<>();
     private final FlowPane moodDisplay = new FlowPane(6, 5);
     private final VBox editor = new VBox(10);
@@ -43,8 +42,6 @@ public class TrackRow extends VBox {
             Runnable onPlay) {
 
         this.track = track;
-        this.state = state;
-
         setSpacing(8);
         setPadding(new Insets(10, 12, 10, 12));
 
