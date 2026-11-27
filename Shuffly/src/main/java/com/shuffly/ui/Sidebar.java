@@ -4,6 +4,7 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
@@ -16,8 +17,10 @@ public class Sidebar extends VBox {
 
     private final Button homeBtn, searchBtn, libraryBtn, shuffleModeBtn, queueBtn, settingsBtn;
     private final Consumer<String> onNavigate;
+    private final Button backBtn;
+    private final Button forwardBtn;
 
-    public Sidebar(Consumer<String> onNavigate) {
+    public Sidebar(Consumer<String> onNavigate, Runnable onBack, Runnable onForward) {
         this.onNavigate = onNavigate;
 
         setPrefWidth(240);
@@ -28,7 +31,56 @@ public class Sidebar extends VBox {
         Label logo = new Label("Shuffly");
         logo.setTextFill(Color.WHITE);
         logo.setFont(Font.font("System", FontWeight.BOLD, 26));
-        logo.setPadding(new Insets(0, 0, 28, 12));
+
+        backBtn = new Button("‹");
+        forwardBtn = new Button("›");
+
+        backBtn.setOnAction(e -> onBack.run());
+        forwardBtn.setOnAction(e -> onForward.run());
+
+        for (Button btn : new Button[]{backBtn, forwardBtn}) {
+            btn.setPrefSize(34, 34);
+            btn.setMinSize(34, 34);
+            btn.setMaxSize(34, 34);
+
+            btn.setStyle(
+                "-fx-background-color: #282828;" +
+                "-fx-text-fill: white;" +
+                "-fx-font-size: 24px;" +
+                "-fx-font-weight: bold;" +
+                "-fx-background-radius: 50%;" +
+                "-fx-cursor: hand;" +
+                "-fx-padding: 0;"
+            );
+
+            btn.setOnMouseEntered(e ->
+                btn.setStyle(
+                    "-fx-background-color: #3E3E3E;" +
+                    "-fx-text-fill: white;" +
+                    "-fx-font-size: 24px;" +
+                    "-fx-font-weight: bold;" +
+                    "-fx-background-radius: 50%;" +
+                    "-fx-cursor: hand;" +
+                    "-fx-padding: 0;"
+                )
+            );
+
+            btn.setOnMouseExited(e ->
+                btn.setStyle(
+                    "-fx-background-color: #282828;" +
+                    "-fx-text-fill: white;" +
+                    "-fx-font-size: 24px;" +
+                    "-fx-font-weight: bold;" +
+                    "-fx-background-radius: 50%;" +
+                    "-fx-cursor: hand;" +
+                    "-fx-padding: 0;"
+                )
+            );
+        }
+
+        HBox logoRow = new HBox(10, logo, backBtn, forwardBtn);
+        logoRow.setAlignment(Pos.CENTER_LEFT);
+        logoRow.setPadding(new Insets(0, 0, 28, 12));
 
         homeBtn = navButton("Home");
         searchBtn = navButton("Search");
@@ -40,7 +92,7 @@ public class Sidebar extends VBox {
         Region spacer = new Region();
         VBox.setVgrow(spacer, Priority.ALWAYS);
 
-        getChildren().addAll(logo, homeBtn, searchBtn, libraryBtn, shuffleModeBtn, queueBtn, spacer, settingsBtn);
+        getChildren().addAll(logoRow, homeBtn, searchBtn, libraryBtn, shuffleModeBtn, queueBtn, spacer, settingsBtn);
         select("Home");
     }
 
@@ -101,5 +153,15 @@ public class Sidebar extends VBox {
             "-fx-background-radius: 6px; -fx-cursor: hand; " +
             "-fx-focus-color: transparent; -fx-faint-focus-color: transparent;"
         );
+    }
+    
+    public void setBackDisabled(boolean disabled) {
+        backBtn.setDisable(disabled);
+        backBtn.setOpacity(disabled ? 0.35 : 1.0);
+    }
+
+    public void setForwardDisabled(boolean disabled) {
+        forwardBtn.setDisable(disabled);
+        forwardBtn.setOpacity(disabled ? 0.35 : 1.0);
     }
 }
