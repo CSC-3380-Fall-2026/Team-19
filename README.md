@@ -51,8 +51,6 @@ Other desktop operating systems capable of running Java 17 and JavaFX may work, 
 ## Important Project Links
 
 - **Kanban Board:** [Team 19 Kanban Board](https://github.com/orgs/CSC-3380-Fall-2026/projects/11)
-- **Designs:** TODO — add direct design/Figma link
-- **Code Standards / Style Guide:** TODO — add direct code standards link
 - **Repository:** Team 19 GitHub repository
 
 ## Technology Stack
@@ -132,6 +130,8 @@ A valid Spotify Developer application must be configured to use the same redirec
 Spotify credentials are required for authentication. Client secrets should not be exposed in public repositories or documentation.
 
 For playback controls to function, the user must also have an active Spotify playback device/session.
+
+**Note:** Spotify Premium and an active Spotify playback device are required for music playback through Shuffly.
 
 ## Running Shuffly From Source
 
