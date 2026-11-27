@@ -115,11 +115,17 @@ public class SpotifyAuth {
 
         accessToken = json.getString("access_token");
         refreshToken = json.optString("refresh_token", null);
-
+        
         // Calculate when the access token expires.
         long expiresIn = json.optLong("expires_in", 3600);
         tokenExpirationTime = System.currentTimeMillis()
                 + (expiresIn * 1000L);
+
+        TokenStorage.save(
+                accessToken,
+                refreshToken,
+                tokenExpirationTime
+        );
 
         return accessToken;
     }
@@ -170,7 +176,13 @@ public class SpotifyAuth {
             refreshToken = json.getString("refresh_token");
         }
 
-        System.out.println("Access token refreshed");
+        TokenStorage.save(
+                accessToken,
+                refreshToken,
+                tokenExpirationTime
+        );
+
+        System.out.println("Access token refreshed and saved.");
         return accessToken;
     }
     
@@ -183,10 +195,38 @@ public class SpotifyAuth {
 
         return accessToken;
     }
+    
+    public static void loadSavedTokens() {
+        try {
+            JSONObject json = TokenStorage.load();
+
+            if (json == null) {
+                System.out.println("No saved Spotify authentication found.");
+                return;
+            }
+
+            accessToken = json.optString("accessToken", null);
+            refreshToken = json.optString("refreshToken", null);
+            tokenExpirationTime = json.optLong("expirationTime", 0);
+
+            System.out.println("Saved Spotify authentication loaded.");
+
+        } catch (Exception e) {
+            System.err.println("Could not load saved Spotify authentication:");
+            e.printStackTrace();
+        }
+    }
 
     public static void logout() {
         accessToken = null;
         refreshToken = null;
         tokenExpirationTime = 0;
+
+        try {
+            TokenStorage.delete();
+        } catch (Exception e) {
+            System.err.println("Could not delete saved Spotify authentication:");
+            e.printStackTrace();
+        }
     }
 }

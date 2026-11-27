@@ -15,6 +15,8 @@ import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
+import com.shuffly.AppState;
+import com.shuffly.LibraryStorage;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -28,17 +30,20 @@ public class TrackRow extends VBox {
     );
 
     private final Track track;
+    private final AppState state;
     private final List<CheckBox> moodCheckboxes = new ArrayList<>();
     private final FlowPane moodDisplay = new FlowPane(6, 5);
     private final VBox editor = new VBox(10);
 
     public TrackRow(
+    		AppState state,
             Track track,
             String leftLabel,
             boolean isCurrent,
             Runnable onPlay) {
 
         this.track = track;
+        this.state = state;
 
         setSpacing(8);
         setPadding(new Insets(10, 12, 10, 12));
@@ -138,6 +143,15 @@ public class TrackRow extends VBox {
 
             track.setMoodTags(selectedMoods);
             track.setMoodTagsCustomized(true);
+
+            try {
+                LibraryStorage.save(state);
+                savedMessage.setText("Tags saved!");
+            } catch (Exception ex) {
+                savedMessage.setText("Could not save tags.");
+                System.err.println("Could not save updated mood tags:");
+                ex.printStackTrace();
+            }
 
             refreshMoodDisplay();
 

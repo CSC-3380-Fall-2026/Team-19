@@ -1,9 +1,11 @@
 package com.shuffly.ui;
 
 import com.shuffly.AppState;
+import com.shuffly.LibraryStorage;
 import com.shuffly.ui.pages.*;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
+import com.shuffly.spotify.SpotifyAuth;
 
 public class MainLayout extends BorderPane {
 
@@ -13,6 +15,7 @@ public class MainLayout extends BorderPane {
     private final PlayerBar playerBar;
 
     public MainLayout() {
+    	SpotifyAuth.loadSavedTokens();
         contentArea.setStyle("-fx-background-color: #121212;");
         contentArea.setPadding(new javafx.geometry.Insets(40));
 
@@ -23,7 +26,19 @@ public class MainLayout extends BorderPane {
         setCenter(contentArea);
         setBottom(playerBar);
         setStyle("-fx-background-color: #000000;");
+        
+        try {
+            boolean loaded = LibraryStorage.load(state);
 
+            if (loaded) {
+                System.out.println("Restored saved Spotify library.");
+            }
+
+        } catch (Exception e) {
+            System.err.println("Could not load saved library:");
+            e.printStackTrace();
+        }
+        
         showPage("Home");
     }
 
