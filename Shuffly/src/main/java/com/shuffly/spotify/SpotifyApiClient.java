@@ -243,7 +243,7 @@ public class SpotifyApiClient {
             throws Exception {
 
         return getAllPages(
-            "/playlists/" + playlistId + "/tracks?limit=50",
+            "/playlists/" + playlistId + "/items?limit=50",
             "getPlaylistTracks",
             true
         );

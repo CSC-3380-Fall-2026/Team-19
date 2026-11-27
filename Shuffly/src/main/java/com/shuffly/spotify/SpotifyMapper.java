@@ -86,29 +86,37 @@ public class SpotifyMapper {
         return tracks;
     }
 
-    public static List<Track> toTrackListFromPlaylist(JSONArray items) {
 
-        List<Track> tracks = new ArrayList<>();
+	public static List<Track> toTrackListFromPlaylist(JSONArray items) {
+	
+	    List<Track> tracks = new ArrayList<>();
+	
+	    for (int i = 0; i < items.length(); i++) {
+	
+	        JSONObject item = items.optJSONObject(i);
+	
+	        if (item == null) {
+	            continue;
+	        }
+	
+	        // New Spotify response format uses "item".
+	        // Fall back to "track" for older responses.
+	        JSONObject trackJson = item.optJSONObject("item");
+	
+	        if (trackJson == null) {
+	            trackJson = item.optJSONObject("track");
+	        }
+	
+	        Track track = toTrack(trackJson);
+	
+	        if (track != null && !track.getId().isEmpty()) {
+	            tracks.add(track);
+	        }
+	    }
+	
+	    return tracks;
+	}
 
-        for (int i = 0; i < items.length(); i++) {
-
-            JSONObject item = items.optJSONObject(i);
-
-            if (item == null) {
-                continue;
-            }
-
-            JSONObject trackJson = item.optJSONObject("track");
-
-            Track track = toTrack(trackJson);
-
-            if (track != null) {
-                tracks.add(track);
-            }
-        }
-
-        return tracks;
-    }
 
     public static Playlist toPlaylist(
             JSONObject playlistJson,
