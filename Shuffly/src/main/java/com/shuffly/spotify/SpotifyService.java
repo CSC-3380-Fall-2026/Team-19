@@ -9,6 +9,8 @@ import com.shuffly.shuffle.MoodTagger;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
+import java.util.HashMap;
+import java.util.Map;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -18,13 +20,31 @@ public class SpotifyService {
     private final SpotifyApiClient api = new SpotifyApiClient();
 
     public void loadUserLibrary(AppState state) throws Exception {
+        loadUserLibrary(state, false);
+    }
 
+    public void refreshUserLibrary(AppState state) throws Exception {
+        loadUserLibrary(state, true);
+    }
+
+    private void loadUserLibrary(AppState state, boolean preserveQueue) throws Exception {
+    	String selectedPlaylistId = state.selectedPlaylist == null
+    	        ? "liked"
+    	        : state.selectedPlaylist.getId();
+    	
+    	// Keep existing tracks so custom mood tags can be preserved.
+    	List<Track> previousTracks = new ArrayList<>(state.likedSongs);
+
+    	for (Playlist playlist : state.playlists) {
+    	    previousTracks.addAll(playlist.getTracks());
+    	}
+    	
         // Load Liked Songs
-        JSONArray likedJson = api.getLikedSongs();
-
-        state.likedSongs = SpotifyMapper.toTrackListFromSaved(likedJson);
-
-        assignMoodTags(state.likedSongs);
+    	JSONArray likedJson = api.getLikedSongs();
+    	List<Track> newLikedSongs = SpotifyMapper.toTrackListFromSaved(likedJson);
+    	preserveCustomizedMoodTags(newLikedSongs, previousTracks);
+    	state.likedSongs = newLikedSongs;
+    	assignMoodTags(state.likedSongs);
 
         Playlist likedPlaylist =
                 new Playlist("liked", "Liked Songs", null);
@@ -49,11 +69,10 @@ public class SpotifyService {
             List<Track> tracks = new ArrayList<>();
 
             try {
-                JSONArray tracksJson = api.getPlaylistTracks(id);
-
-                tracks = SpotifyMapper.toTrackListFromPlaylist(tracksJson);
-
-                assignMoodTags(tracks);
+            	JSONArray tracksJson = api.getPlaylistTracks(id);
+            	tracks = SpotifyMapper.toTrackListFromPlaylist(tracksJson);
+            	preserveCustomizedMoodTags(tracks, previousTracks);
+            	assignMoodTags(tracks);
 
             } catch (Exception ex) {
                 System.err.println(
@@ -69,13 +88,18 @@ public class SpotifyService {
         state.playlists = playlists;
 
         // Make Liked Songs the default active playlist
-        state.selectedPlaylist = likedPlaylist;
+        state.selectedPlaylist = playlists.stream()
+                .filter(playlist -> playlist.getId().equals(selectedPlaylistId))
+                .findFirst()
+                .orElse(likedPlaylist);
 
-        // Automatically populate the queue
-        state.queueManager.loadShuffled(
-                likedPlaylist.getTracks(),
-                state.selectedMood
-        );
+        // Only initialize the queue if there isn't already a current song.
+        if (!preserveQueue && state.queueManager.getCurrent() == null) {
+            state.queueManager.loadShuffled(
+                    likedPlaylist.getTracks(),
+                    state.selectedMood
+            );
+        }
         try {
             LibraryStorage.save(state);
         } catch (Exception e) {
@@ -139,6 +163,28 @@ public class SpotifyService {
 	
 	    for (Track track : tracks) {
 	        MoodTagger.assignTags(track);
+	    }
+	}
+	
+	private void preserveCustomizedMoodTags(
+	        List<Track> newTracks,
+	        List<Track> previousTracks) {
+
+	    Map<String, Track> previousTracksById = new HashMap<>();
+
+	    for (Track track : previousTracks) {
+	        if (track.areMoodTagsCustomized()) {
+	            previousTracksById.put(track.getId(), track);
+	        }
+	    }
+
+	    for (Track newTrack : newTracks) {
+	        Track previousTrack = previousTracksById.get(newTrack.getId());
+
+	        if (previousTrack != null) {
+	            newTrack.setMoodTags(previousTrack.getMoodTags());
+	            newTrack.setMoodTagsCustomized(true);
+	        }
 	    }
 	}
 
